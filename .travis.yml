@@ -18,6 +18,6 @@ addons:
       name: "wultra/powerauth-server"
       description: "Build submitted via Travis CI"
     notification_email: roman.strobl@wultra.com
-    build_command_prepend: "mvn -f powerauth-java-server/pom.xml clean"
+    build_command_prepend: "mvn clean"
     build_command: "mvn -f powerauth-java-server/pom.xml -DskipTests=true compile"
     branch_pattern: coverity_scan
