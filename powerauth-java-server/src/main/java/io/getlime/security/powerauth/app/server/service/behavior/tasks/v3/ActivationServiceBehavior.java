@@ -33,6 +33,7 @@ import io.getlime.security.powerauth.app.server.database.model.RecoveryPukStatus
 import io.getlime.security.powerauth.app.server.database.model.*;
 import io.getlime.security.powerauth.app.server.database.model.entity.*;
 import io.getlime.security.powerauth.app.server.database.repository.*;
+import io.getlime.security.powerauth.app.server.service.behavior.ServiceBehaviorCatalogue;
 import io.getlime.security.powerauth.app.server.service.exceptions.GenericServiceException;
 import io.getlime.security.powerauth.app.server.service.i18n.LocalizationProvider;
 import io.getlime.security.powerauth.app.server.service.model.ActivationRecovery;
@@ -89,6 +90,7 @@ public class ActivationServiceBehavior {
     private static final byte POWERAUTH_PROTOCOL_VERSION = 0x3;
 
     private final RepositoryCatalogue repositoryCatalogue;
+    private final ServiceBehaviorCatalogue behaviorCatalogue;
 
     private CallbackUrlBehavior callbackUrlBehavior;
 
@@ -112,8 +114,9 @@ public class ActivationServiceBehavior {
     private static final Logger logger = LoggerFactory.getLogger(ActivationServiceBehavior.class);
 
     @Autowired
-    public ActivationServiceBehavior(RepositoryCatalogue repositoryCatalogue, PowerAuthServiceConfiguration powerAuthServiceConfiguration) {
+    public ActivationServiceBehavior(RepositoryCatalogue repositoryCatalogue, ServiceBehaviorCatalogue behaviorCatalogue, PowerAuthServiceConfiguration powerAuthServiceConfiguration) {
         this.repositoryCatalogue = repositoryCatalogue;
+        this.behaviorCatalogue = behaviorCatalogue;
         this.powerAuthServiceConfiguration = powerAuthServiceConfiguration;
     }
 
@@ -255,6 +258,83 @@ public class ActivationServiceBehavior {
     }
 
     /**
+     * Lookup activations using various query parameters.
+     *
+     * @param userIds User IDs to be used in the activations query.
+     * @param applicationIds Application IDs to be used in the activations query (optional).
+     * @param timestampLastUsedBefore Last used timestamp to be used in the activations query, return all records where timestampLastUsed &lt; timestampLastUsedBefore (optional).
+     * @param timestampLastUsedAfter Last used timestamp to be used in the activations query, return all records where timestampLastUsed &gt;= timestampLastUsedAfter (optional).
+     * @param activationStatus Activation status to be used in the activations query (optional).
+     * @return Response with list of matching activations.
+     * @throws DatatypeConfigurationException If calendar conversion fails.
+     */
+    public LookupActivationsResponse lookupActivations(List<String> userIds, List<Long> applicationIds, Date timestampLastUsedBefore, Date timestampLastUsedAfter, ActivationStatus activationStatus) throws DatatypeConfigurationException {
+        final LookupActivationsResponse response = new LookupActivationsResponse();
+        final ActivationRepository activationRepository = repositoryCatalogue.getActivationRepository();
+        final ApplicationRepository applicationRepository = repositoryCatalogue.getApplicationRepository();
+        if (applicationIds != null && applicationIds.isEmpty()) {
+            // Make sure application ID list is null in case no application ID is specified
+            applicationIds = null;
+        }
+        List<ActivationStatus> statuses = new ArrayList<>();
+        if (activationStatus == null) {
+            // In case activation status is not specified, consider all statuses
+            statuses.addAll(Arrays.asList(ActivationStatus.values()));
+        } else {
+            statuses.add(activationStatus);
+        }
+        List<ActivationRecordEntity> activationsList = activationRepository.lookupActivations(userIds, applicationIds, timestampLastUsedBefore, timestampLastUsedAfter, statuses);
+
+        if (activationsList != null) {
+            for (ActivationRecordEntity activation : activationsList) {
+                // Map between database object and service objects
+                LookupActivationsResponse.Activations activationServiceItem = new LookupActivationsResponse.Activations();
+                activationServiceItem.setActivationId(activation.getActivationId());
+                activationServiceItem.setActivationStatus(activationStatusConverter.convert(activation.getActivationStatus()));
+                activationServiceItem.setBlockedReason(activation.getBlockedReason());
+                activationServiceItem.setActivationName(activation.getActivationName());
+                activationServiceItem.setExtras(activation.getExtras());
+                activationServiceItem.setTimestampCreated(XMLGregorianCalendarConverter.convertFrom(activation.getTimestampCreated()));
+                activationServiceItem.setTimestampLastUsed(XMLGregorianCalendarConverter.convertFrom(activation.getTimestampLastUsed()));
+                activationServiceItem.setTimestampLastChange(XMLGregorianCalendarConverter.convertFrom(activation.getTimestampLastChange()));
+                activationServiceItem.setUserId(activation.getUserId());
+                activationServiceItem.setApplicationId(activation.getApplication().getId());
+                activationServiceItem.setApplicationName(activation.getApplication().getName());
+                // Unknown version is converted to 0 in SOAP
+                activationServiceItem.setVersion(activation.getVersion() == null ? 0L : activation.getVersion());
+                response.getActivations().add(activationServiceItem);
+            }
+        }
+
+        return response;
+    }
+
+    /**
+     * Update status for activations.
+     * @param activationIds Identifiers of activations to update.
+     * @param activationStatus Activation status to use.
+     * @return Response with indication whether status update succeeded.
+     */
+    public UpdateStatusForActivationsResponse updateStatusForActivation(List<String> activationIds, ActivationStatus activationStatus) {
+        final UpdateStatusForActivationsResponse response = new UpdateStatusForActivationsResponse();
+        final ActivationRepository activationRepository = repositoryCatalogue.getActivationRepository();
+
+        activationIds.forEach(activationId -> {
+            ActivationRecordEntity activation = activationRepository.findActivationWithLock(activationId);
+            if (!activation.getActivationStatus().equals(activationStatus)) {
+                // Update activation status, persist change and notify callback listeners
+                activation.setActivationStatus(activationStatus);
+                activationHistoryServiceBehavior.saveActivationAndLogChange(activation);
+                callbackUrlBehavior.notifyCallbackListeners(activation.getApplication().getId(), activation.getActivationId());
+            }
+        });
+
+        response.setUpdated(true);
+
+        return response;
+    }
+
+    /**
      * Get activation status for given activation ID
      *
      * @param activationId           Activation ID
@@ -362,13 +442,19 @@ public class ActivationServiceBehavior {
                         SecretKey transportKey = powerAuthServerKeyFactory.generateServerTransportKey(masterSecretKey);
 
                         String ctrDataBase64 = activation.getCtrDataBase64();
-                        byte[] ctrDataForStatusBlob;
+                        byte[] ctrDataHashForStatusBlob;
                         if (ctrDataBase64 != null) {
-                            // In crypto v3 counter data is stored with activation
-                            ctrDataForStatusBlob = BaseEncoding.base64().decode(ctrDataBase64);
+                            // In crypto v3 counter data is stored with activation. We have to calculate hash from
+                            // the counter value, before it's encoded into the status blob. The value might be replaced
+                            // in `encryptedStatusBlob()` function that injects random data, depending on the version
+                            // of the status blob encryption.
+                            final byte[] ctrData = BaseEncoding.base64().decode(ctrDataBase64);
+                            ctrDataHashForStatusBlob = powerAuthServerActivation.calculateHashFromHashBasedCounter(ctrData, transportKey);
                         } else {
-                            // In crypto v2 counter data is not present, generate random bytes
-                            ctrDataForStatusBlob = keyGenerator.generateRandomBytes(16);
+                            // In crypto v2 counter data is not present, so use an array of zero bytes. This might be
+                            // replaced in `encryptedStatusBlob()` function that injects random data automatically,
+                            // depending on the version of the status blob encryption.
+                            ctrDataHashForStatusBlob = new byte[16];
                         }
                         byte[] statusChallenge;
                         byte[] statusNonce;
@@ -391,7 +477,8 @@ public class ActivationServiceBehavior {
                         statusBlobInfo.setFailedAttempts(activation.getFailedAttempts().byteValue());
                         statusBlobInfo.setMaxFailedAttempts(activation.getMaxFailedAttempts().byteValue());
                         statusBlobInfo.setCtrLookAhead((byte)powerAuthServiceConfiguration.getSignatureValidationLookahead());
-                        statusBlobInfo.setCtrData(ctrDataForStatusBlob);
+                        statusBlobInfo.setCtrByte(activation.getCounter().byteValue());
+                        statusBlobInfo.setCtrDataHash(ctrDataHashForStatusBlob);
                         encryptedStatusBlob = powerAuthServerActivation.encryptedStatusBlob(statusBlobInfo, statusChallenge, statusNonce, transportKey);
 
                         // Assign the activation fingerprint
@@ -1124,7 +1211,8 @@ public class ActivationServiceBehavior {
             byte[] ephemeralPublicKeyBytes = BaseEncoding.base64().decode(ephemeralPublicKey);
             byte[] encryptedDataBytes = BaseEncoding.base64().decode(encryptedData);
             byte[] macBytes = BaseEncoding.base64().decode(mac);
-            final EciesCryptogram eciesCryptogram = new EciesCryptogram(ephemeralPublicKeyBytes, macBytes, encryptedDataBytes);
+            byte[] nonceBytes = request.getNonce() != null ? BaseEncoding.base64().decode(request.getNonce()) : null;
+            final EciesCryptogram eciesCryptogram = new EciesCryptogram(ephemeralPublicKeyBytes, macBytes, encryptedDataBytes, nonceBytes);
 
             // Prepare repositories
             final ActivationRepository activationRepository = repositoryCatalogue.getActivationRepository();
@@ -1258,6 +1346,7 @@ public class ActivationServiceBehavior {
                 for (RecoveryPukEntity recoveryPukEntity : recoveryCodeEntity.getRecoveryPuks()) {
                     if (RecoveryPukStatus.VALID.equals(recoveryPukEntity.getStatus())) {
                         validPukExists = true;
+                        break;
                     }
                 }
                 if (!validPukExists) {
