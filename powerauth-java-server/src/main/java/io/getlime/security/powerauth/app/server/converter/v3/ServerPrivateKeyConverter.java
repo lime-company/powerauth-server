@@ -24,12 +24,11 @@ import io.getlime.security.powerauth.app.server.database.model.ServerPrivateKey;
 import io.getlime.security.powerauth.app.server.service.exceptions.GenericServiceException;
 import io.getlime.security.powerauth.app.server.service.i18n.LocalizationProvider;
 import io.getlime.security.powerauth.app.server.service.model.ServiceError;
-import io.getlime.security.powerauth.crypto.lib.config.PowerAuthConfiguration;
 import io.getlime.security.powerauth.crypto.lib.generator.KeyGenerator;
+import io.getlime.security.powerauth.crypto.lib.model.exception.CryptoProviderException;
 import io.getlime.security.powerauth.crypto.lib.model.exception.GenericCryptoException;
 import io.getlime.security.powerauth.crypto.lib.util.AESEncryptionUtils;
-import io.getlime.security.powerauth.provider.CryptoProviderUtil;
-import io.getlime.security.powerauth.provider.exception.CryptoProviderException;
+import io.getlime.security.powerauth.crypto.lib.util.KeyConvertor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,7 +55,7 @@ public class ServerPrivateKeyConverter {
     // Utility classes for crypto
     private final KeyGenerator keyGenerator = new KeyGenerator();
     private final AESEncryptionUtils aesEncryptionUtils = new AESEncryptionUtils();
-    private final CryptoProviderUtil keyConversionUtilities = PowerAuthConfiguration.INSTANCE.getKeyConvertor();
+    private final KeyConvertor keyConvertor = new KeyConvertor();
 
     // Prepare logger
     private static final Logger logger = LoggerFactory.getLogger(ServerPrivateKeyConverter.class);
@@ -80,6 +79,7 @@ public class ServerPrivateKeyConverter {
         EncryptionMode encryptionMode = serverPrivateKey.getEncryptionMode();
         if (encryptionMode == null) {
             logger.error("Missing key encryption mode");
+            // Rollback is not required, error occurs before writing to database
             throw localizationProvider.buildExceptionForCode(ServiceError.UNSUPPORTED_ENCRYPTION_MODE);
         }
 
@@ -94,12 +94,13 @@ public class ServerPrivateKeyConverter {
                 // In case master DB encryption key does not exist, do not encrypt the server private key
                 if (masterDbEncryptionKeyBase64 == null || masterDbEncryptionKeyBase64.isEmpty()) {
                     logger.error("Missing master DB encryption key");
+                    // Rollback is not required, error occurs before writing to database
                     throw localizationProvider.buildExceptionForCode(ServiceError.MISSING_MASTER_DB_ENCRYPTION_KEY);
                 }
 
                 try {
                     // Convert master DB encryption key
-                    SecretKey masterDbEncryptionKey = keyConversionUtilities.convertBytesToSharedSecretKey(BaseEncoding.base64().decode(masterDbEncryptionKeyBase64));
+                    SecretKey masterDbEncryptionKey = keyConvertor.convertBytesToSharedSecretKey(BaseEncoding.base64().decode(masterDbEncryptionKeyBase64));
 
                     // Derive secret key from master DB encryption key, userId and activationId
                     SecretKey secretKey = deriveSecretKey(masterDbEncryptionKey, userId, activationId);
@@ -110,6 +111,7 @@ public class ServerPrivateKeyConverter {
                     // Check that the length of the byte array is sufficient to avoid AIOOBE on the next calls
                     if (serverPrivateKeyBytes == null || serverPrivateKeyBytes.length < 16) {
                         logger.error("Invalid encrypted private key format - the byte array is too short");
+                        // Rollback is not required, error occurs before writing to database
                         throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_KEY_FORMAT);
                     }
 
@@ -127,17 +129,21 @@ public class ServerPrivateKeyConverter {
 
                 } catch (InvalidKeyException ex) {
                     logger.error(ex.getMessage(), ex);
+                    // Rollback is not required, cryptography methods are executed before database is used for writing
                     throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_KEY_FORMAT);
                 } catch (GenericCryptoException ex) {
                     logger.error(ex.getMessage(), ex);
+                    // Rollback is not required, cryptography methods are executed before database is used for writing
                     throw localizationProvider.buildExceptionForCode(ServiceError.GENERIC_CRYPTOGRAPHY_ERROR);
                 } catch (CryptoProviderException ex) {
                     logger.error(ex.getMessage(), ex);
+                    // Rollback is not required, cryptography methods are executed before database is used for writing
                     throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_CRYPTO_PROVIDER);
                 }
 
             default:
                 logger.error("Unknown key encryption mode: {}", encryptionMode.getValue());
+                // Rollback is not required, error occurs before writing to database
                 throw localizationProvider.buildExceptionForCode(ServiceError.UNSUPPORTED_ENCRYPTION_MODE);
         }
     }
@@ -161,7 +167,7 @@ public class ServerPrivateKeyConverter {
 
         try {
             // Convert master DB encryption key
-            SecretKey masterDbEncryptionKey = keyConversionUtilities.convertBytesToSharedSecretKey(BaseEncoding.base64().decode(masterDbEncryptionKeyBase64));
+            SecretKey masterDbEncryptionKey = keyConvertor.convertBytesToSharedSecretKey(BaseEncoding.base64().decode(masterDbEncryptionKeyBase64));
 
             // Derive secret key from master DB encryption key, userId and activationId
             SecretKey secretKey = deriveSecretKey(masterDbEncryptionKey, userId, activationId);
@@ -186,15 +192,19 @@ public class ServerPrivateKeyConverter {
 
         } catch (InvalidKeyException ex) {
             logger.error(ex.getMessage(), ex);
+            // Rollback is not required, cryptography methods are executed before database is used for writing
             throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_KEY_FORMAT);
         } catch (GenericCryptoException ex) {
             logger.error(ex.getMessage(), ex);
+            // Rollback is not required, cryptography methods are executed before database is used for writing
             throw localizationProvider.buildExceptionForCode(ServiceError.GENERIC_CRYPTOGRAPHY_ERROR);
         } catch (CryptoProviderException ex) {
             logger.error(ex.getMessage(), ex);
+            // Rollback is not required, cryptography methods are executed before database is used for writing
             throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_CRYPTO_PROVIDER);
         } catch (IOException ex) {
             logger.error(ex.getMessage(), ex);
+            // Rollback is not required, serialization is executed before database is used for writing
             throw localizationProvider.buildExceptionForCode(ServiceError.ENCRYPTION_FAILED);
         }
     }
