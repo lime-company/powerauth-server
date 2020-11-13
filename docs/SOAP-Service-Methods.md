@@ -57,6 +57,7 @@ The following `v3` methods are published using the service:
     - [removeIntegration](#method-removeintegration)
 - Callback URL Management
     - [createCallbackUrl](#method-createcallbackurl)
+    - [updateCallbackUrl](#method-updatecallbackurl)
     - [getCallbackUrlList](#method-getcallbackurllist)
     - [removeCallbackUrl](#method-removecallbackurl)
 - End-To-End Encryption
@@ -72,6 +73,16 @@ The following `v3` methods are published using the service:
     - [recoveryCodeActivation](#method-recoverycodeactivation)
     - [getRecoveryConfig](#method-getrecoveryconfig)
     - [updateRecoveryConfig](#method-updaterecoveryconfig)
+- Activation Flags
+    - [listActivationFlags](#method-listactivationflags)
+    - [addActivationFlags](#method-addactivationflags)
+    - [updateActivationFlags](#method-updateactivationflags)
+    - [removeActivationFlags](#method-removeactivationflags)
+- Application Roles
+    - [listApplicationRoles](#method-listactivationflags)
+    - [addApplicationRoles](#method-addapplicationroles)
+    - [updateApplicationRoles](#method-updateapplicationroles)
+    - [removeApplicationFlags](#method-removeapplicationflags)
 The following `v2` methods are published using the service:
 - Activation Management
     - [prepareActivation (v2)](#method-prepareactivation-v2)
@@ -167,6 +178,7 @@ Get list of all applications that are present in this PowerAuth Server instance.
 |------|------|-------------|
 | `Long` | `id` | An application ID |
 | `String` | `applicationName` | Application name |
+| `String[]` | `applicationRoles` | Roles assigned to the application |
 
 ### Method 'getApplicationDetail'
 
@@ -180,6 +192,7 @@ Get detail of application with given ID or name, including the list of versions.
 |------|------|-------------|
 | `Long` | `applicationId` | An identifier of an application (required if applicationName not specified) |
 | `String` | `applicationName` | An application name (required if applicationId not specified) |
+| `String[]` | `applicationRoles` | Roles assigned to the application |
 
 #### Response
 
@@ -189,6 +202,7 @@ Get detail of application with given ID or name, including the list of versions.
 |------|------|-------------|
 | `Long` | `applicationId` | An identifier of an application |
 | `String` | `applicationName` | An application name |
+| `String[]` | `applicationRoles` | Roles assigned to the application |
 | `String` | `masterPublicKey` | Base64 encoded master public key |
 | `Version[]` | `versions` | Collection of application versions |
 
@@ -242,6 +256,7 @@ Create a new application with given name.
 |------|------|-------------|
 | `Long` | `applicationId` | An identifier of an application |
 | `String` | `applicationName` | An application name |
+| `String[]` | `applicationRoles` | Roles assigned to the application |
 
 ### Method 'createApplicationVersion'
 
@@ -339,7 +354,7 @@ After calling this method, a new activation record is created in CREATED state.
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `activationCode` | Activation code which uses 4x5 characters in Base32 encoding separated by a "-" character |
 | `String` | `activationSignature` | A signature of the activation data using Master Server Private Key |
 | `String` | `userId` | An identifier of a user |
@@ -351,13 +366,14 @@ Assure a key exchange between PowerAuth Client and PowerAuth Server and prepare 
 
 If optional `activationOtp` value is present in ECIES payload, then the value must match the OTP stored in activation's record and OTP validation mode must be ON_KEY_EXCHANGE. 
 
-After successfully calling this method, activation is in OTP_USED or ACTIVE state, depending on the presence of an activation OTP in ECIES payload:
+After successfully calling this method, activation is in PENDING_COMMIT or ACTIVE state, depending on the presence of an activation OTP in ECIES payload:
 
 | Situation | State after `prepareActivation` |
 |-----------|---------------------------------|
-| Activation OTP is not required and is not provided | `OTP_USED` |
-| Activation OTP is required and is valid            | `ACTIVE`   |
-| Activation OTP is required, but is not valid       | `REMOVED`  |
+| OTP is not required and is not provided             | `PENDING_COMMIT` |
+| OTP is required and is valid                        | `ACTIVE`         |
+| OTP is required, but is not valid                   | `CREATED`        |
+| OTP is required, but is not valid, no attempts left | `REMOVED`        |
 
 #### Request
 
@@ -386,7 +402,7 @@ ECIES request should contain following data (as JSON):
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `userId` | User ID |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
 | `String` | `mac` |  Base64 encoded mac of key and data for ECIES |
@@ -406,7 +422,7 @@ Create an activation for given user and application, with provided maximum numbe
 
 If optional `activationOtp` value is set, then the activation's OTP validation mode is set to `ON_COMMIT`. The same OTP value must be later provided in [CommitActivation](#method-commitactivation) method, to complete the activation. 
 
-After successfully calling this method, activation is in OTP_USED state.
+After successfully calling this method, activation is in PENDING_COMMIT state.
 
 #### Request
 
@@ -437,7 +453,7 @@ ECIES request should contain following data (as JSON):
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
 | `String` | `mac` |  Base64 encoded mac of key and data for ECIES |
 
@@ -451,7 +467,7 @@ ECIES response contains following data (as JSON):
 
 ### Method 'updateActivationOtp'
 
-Update activation OTP for activation with given ID. Only non-expired activations in OTP_USED state, with OTP validation set to NONE or ON_COMMIT, can be altered. 
+Update activation OTP for activation with given ID. Only non-expired activations in PENDING_COMMIT state, with OTP validation set to NONE or ON_COMMIT, can be altered. 
 
 After successful, activation OTP is updated and the OTP validation is set to ON_COMMIT.
 
@@ -476,7 +492,7 @@ After successful, activation OTP is updated and the OTP validation is set to ON_
 
 ### Method 'commitActivation'
 
-Commit activation with given ID. Only non-expired activations in OTP_USED state can be committed.
+Commit activation with given ID. Only non-expired activations in PENDING_COMMIT state can be committed.
 
 If optional `activationOtp` value is set, then the value must match the OTP stored in activation's record and OTP validation mode must be `ON_COMMIT`.
 
@@ -526,6 +542,9 @@ Get status information and all important details for activation with given ID.
 | `String` | `activationName` | An activation name |
 | `String` | `userId` | An identifier of a user |
 | `String` | `extras` | Any custom attributes |
+| `String` | `platform` | User device platform, e.g. `ios`, `android`, `hw` and `unknown` |
+| `String` | `deviceInfo` | Information about user device, e.g. `iPhone12,3` |
+| `String[]` | `activationFlags` | Activation flags |
 | `Long` | `applicationId` | An identifier fo an application |
 | `DateTime` | `timestampCreated` | A timestamp when the activation was created |
 | `DateTime` | `timestampLastUsed` | A timestamp when the activation was last used |
@@ -548,7 +567,7 @@ Remove activation with given ID. This operation is irreversible. Activations can
 |------|------|-------------|
 | `String` | `activationId` | An identifier of an activation |
 | `String` | `externalUserId` | User ID of user who removed the activation. Use null value if activation owner caused the change. |
-| `boolean` | `revokeRecoveryCodes` | An optional flag that indicates if recovery codes, that were created in the scope of the removed activation, should be also revoked. |
+| `Boolean` | `revokeRecoveryCodes` | An optional flag that indicates if recovery codes, that were created in the scope of the removed activation, should be also revoked. |
 
 #### Response
 
@@ -590,6 +609,9 @@ Get the list of all activations for given user and application ID. If no applica
 | `String` | `blockedReason` | Reason why activation was blocked (default: NOT_SPECIFIED) |
 | `String` | `activationName` | An activation name |
 | `String` | `extras` | Any custom attributes |
+| `String` | `platform` | User device platform, e.g. `ios`, `android`, `hw` and `unknown` |
+| `String` | `deviceInfo` | Information about user device, e.g. `iPhone12,3` |
+| `String[]` | `activationFlags` | Activation flags |
 | `DateTime` | `timestampCreated` | A timestamp when the activation was created |
 | `DateTime` | `timestampLastUsed` | A timestamp when the activation was last used |
 | `DateTime` | `timestampLastChange` | A timestamp of last activation status change |
@@ -659,6 +681,7 @@ Lookup activations using query parameters.
 | `String` | `timestampLastUsedBefore` | Filter activations by timestamp when the activation was last used (timestampLastUsed < timestampLastUsedBefore), if not specified, a current timestamp is used |
 | `String` | `timestampLastUsedAfter` | Filter activations by timestamp when the activation was last used (timestampLastUsed >= timestampLastUsedAfter), if not specified, the epoch start is used |
 | `String` | `activationStatus` | Filter activations by their status, do not specify value for any status |
+| `String[]` | `activationFlags` | Filter activations by activation flags |
 
 #### Response
 
@@ -675,6 +698,9 @@ Lookup activations using query parameters.
 | `String` | `blockedReason` | Reason why activation was blocked (default: NOT_SPECIFIED) |
 | `String` | `activationName` | An activation name |
 | `String` | `extras` | Any custom attributes |
+| `String` | `platform` | User device platform, e.g. `ios`, `android`, `hw` and `unknown` |
+| `String` | `deviceInfo` | Information about user device, e.g. `iPhone12,3` |
+| `String[]` | `activationFlags` | Activation flags |
 | `DateTime` | `timestampCreated` | A timestamp when the activation was created |
 | `DateTime` | `timestampLastUsed` | A timestamp when the activation was last used |
 | `DateTime` | `timestampLastChange` | A timestamp of last activation status change |
@@ -1062,7 +1088,7 @@ Get the status change log for given activation and date range.
 | `Long` | `id` | Change ID |
 | `String` | `activationId` | An identifier of an activation |
 | `ActivationStatus` | `activationStatus` | An activation status at the moment of a signature verification |
-| `String` | `blockedReason` | Reason why activation was blocked (default: NOT_SPECIFIED) |
+| `String` | `eventReason` | Reason why this activation history record was created (default: null) |
 | `String` | `externalUserId` | User ID of user who modified the activation. Null value is used if activation owner caused the change. |
 | `DateTime` | `timestampCreated` | Timestamp when the record was created |
 
@@ -1143,7 +1169,7 @@ Remove integration with given ID.
 
 ### Method 'createCallbackUrl'
 
-Creates a callback URL with given parameters.
+Create a callback URL with given parameters.
 
 #### Request
 
@@ -1154,6 +1180,18 @@ Creates a callback URL with given parameters.
 | `Long` | `applicationId` | Associated application ID. |
 | `String` | `name` | Callback URL name, for visual identification. |
 | `String` | `callbackUrl` | Callback URL that should be notified about activation status updates. |
+| `List<String>` | `attributes` | Attributes which should be sent with the callback. |
+
+The `attributes` list can contain following values:
+- `activationId`
+- `userId`
+- `activationName`
+- `deviceInfo`
+- `platform`
+- `activationFlags`
+- `activationStatus`
+- `blockedReason`
+- `applicationId`
 
 #### Response
 
@@ -1165,6 +1203,45 @@ Creates a callback URL with given parameters.
 | `Long` | `applicationId` | Associated application ID. |
 | `String` | `name` | Callback URL name, for visual identification. |
 | `String` | `callbackUrl` | Callback URL that should be notified about activation status updates. |
+| `List<String>` | `attributes` | Attributes which should be sent with the callback. |
+
+### Method 'updateCallbackUrl'
+
+Update a callback URL with given parameters.
+
+#### Request
+
+`UpdateCallbackUrlRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | Associated application ID. |
+| `String` | `name` | Callback URL name, for visual identification. |
+| `String` | `callbackUrl` | Callback URL that should be notified about activation status updates. |
+| `List<String>` | `attributes` | Attributes which should be sent with the callback. |
+
+The `attributes` list can contain following values:
+- `activationId`
+- `userId`
+- `activationName`
+- `deviceInfo`
+- `platform`
+- `activationFlags`
+- `activationStatus`
+- `blockedReason`
+- `applicationId`
+
+#### Response
+
+`UpdateCallbackUrlResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `id` | Callback URL identifier (UUID4). |
+| `Long` | `applicationId` | Associated application ID. |
+| `String` | `name` | Callback URL name, for visual identification. |
+| `String` | `callbackUrl` | Callback URL that should be notified about activation status updates. |
+| `List<String>` | `attributes` | Attributes which should be sent with the callback. |
 
 ### Method 'getCallbackUrlList'
 
@@ -1194,6 +1271,7 @@ Get the list of all callbacks for given application.
 | `Long` | `applicationId` | Associated application ID. |
 | `String` | `name` | Callback URL name, for visual identification. |
 | `String` | `callbackUrl` | Callback URL that should be notified about activation status updates. |
+| `List<String>` | `attributes` | Attributes which should be sent with the callback. |
 
 ### Method 'removeCallbackUrl'
 
@@ -1228,7 +1306,7 @@ Get ECIES decryptor data for request/response decryption on intermediate server.
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
+| `String` | `activationId` | A UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
 | `String` | `applicationKey` | A key (identifier) of an application, associated with given application version |
 | `String` | `ephemeralPublicKey` | A base64 encoded ephemeral public key for ECIES |
 
@@ -1253,7 +1331,7 @@ Upgrade activation to the most recent version supported by the server.
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
+| `String` | `activationId` | A UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
 | `String` | `applicationKey` | A key (identifier) of an application, associated with given application version |
 | `String` | `ephemeralPublicKey` | A base64 encoded ephemeral public key for ECIES |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
@@ -1279,7 +1357,7 @@ Commint activation upgrade.
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
+| `String` | `activationId` | A UUID4 identifier of an activation (used only in activation scope, use null value in application scope) |
 | `String` | `applicationKey` | A key (identifier) of an application, associated with given application version |
 
 #### Response
@@ -1337,7 +1415,7 @@ Confirm a recovery code recieved using recovery postcard.
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `applicationKey` | A key (identifier) of an application, associated with given application version |
 | `String` | `ephemeralPublicKey` | Base64 encoded ephemeral public key for ECIES |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
@@ -1353,7 +1431,7 @@ ECIES request should contain following data (as JSON):
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `userId` | An identifier of a user |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
 | `String` | `mac` | Base64 encoded mac of key and data for ECIES |
@@ -1372,7 +1450,7 @@ Lookup recovery codes.
 | Type | Name | Description |
 |------|------|-------------|
 | `String` | `userId` | An identifier of a user |
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `applicationId` | An identifier of an application |
 | `RecoveryCodeStatus` | `recoveryCodeStatus` | Recovery code status |
 | `RecoveryPukStatus` | `recoveryPukStatus` | Recovery PUK status |
@@ -1387,7 +1465,7 @@ Lookup recovery codes.
 | `String` | `recoveryCodeMasked` | Recovery code with partial masking to avoid leaking recovery code |
 | `String` | `userId` | An identifier of a user |
 | `Long` | `applicationId` | An identifier of an application |
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `RecoveryCodeStatus` | `status` | Recovery code status |
 | `Puk[]` | `puks` | Recovery code PUKs |
 
@@ -1420,7 +1498,7 @@ Revoke recovery codes.
 
 ### Method `recoveryCodeActivation`
 
-Create an activation using recovery code. After successfully calling this method, activation is in OTP_USED state.
+Create an activation using recovery code. After successfully calling this method, activation is in PENDING_COMMIT state.
 
 If optional `activationOtp` value is set, then the activation's OTP validation mode is set to `ON_COMMIT`. The same OTP value must be later provided in [CommitActivation](#method-commitactivation) method, to complete the activation.
 
@@ -1453,7 +1531,7 @@ ECIES request should contain following data (as JSON):
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `userId` | An identifier of a user |
 | `String` | `encryptedData` | Base64 encoded encrypted data for ECIES |
 | `String` | `mac` | Base64 encoded mac of key and data for ECIES |
@@ -1518,11 +1596,186 @@ Update configuration of activation recovery.
 |------|------|-------------|
 | `Boolean` | `updated` | Whether recovery configuration was updated |   
 
+### Method `listActivationFlags`
+
+List flags for an activation.
+
+#### Request
+
+`ListActivationFlagsRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | A UUID4 identifier of an activation |
+
+#### Response
+
+`ListActivationFlagsResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | The UUID4 identifier of the activation |
+| `String[]` | `activationFlags` | Activation flags for the activation |
+
+### Method `addActivationFlags`
+
+Add activation flags to an activation. Duplicate flags are ignored.
+
+#### Request
+
+`AddActivationFlagsRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | A UUID4 identifier of an activation |
+| `String[]` | `activationFlags` | Activation flags to be added to the activation |
+
+#### Response
+
+`AddActivationFlagsResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | The UUID4 identifier of the activation |
+| `String[]` | `activationFlags` | Activation flags for the activation after the addition |
+
+### Method `updateActivationFlags`
+
+Update activation flags to an activation. Existing flags are removed.
+
+#### Request
+
+`UpdateActivationFlagsRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | A UUID4 identifier of an activation |
+| `String[]` | `activationFlags` | Activation flags for the update |
+
+#### Response
+
+`UpdateActivationFlagsResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | The UUID4 identifier of the activation |
+| `String[]` | `activationFlags` | Activation flags for the activation after the update |
+
+### Method `removeActivationFlags`
+
+Remove activation flags for an activation.
+
+#### Request
+
+`RemoveActivationFlagsRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | A UUID4 identifier of an activation |
+| `String[]` | `activationFlags` | Activation flags to be removed from the activation |
+
+#### Response
+
+`RemoveActivationFlagsResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `activationId` | The UUID4 identifier of the activation |
+| `String[]` | `activationFlags` | Activation flags for the activation after the removal |
+
+### Method `listApplicationRoles`
+
+List roles for an application.
+
+#### Request
+
+`ListApplicationRolesRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | An identifier of an application |
+
+#### Response
+
+`ListApplicationRolesResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | The identifier of the application |
+| `String[]` | `applicationRoles` | Application roles assigned to the application |
+
+### Method `addApplicationRoles`
+
+Add application roles to an application. Duplicate roles are ignored.
+
+#### Request
+
+`AddApplicationRolesRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | An identifier of an application |
+| `String[]` | `applicationRoles` | Application roles to be added to the application |
+
+#### Response
+
+`AddApplicationRolesResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | The identifier of the application |
+| `String[]` | `applicationRoles` | Application roles assigned to the application after the addition |
+
+### Method `updateApplicationRoles`
+
+Update application roles assigned to an application. Existing roles are removed.
+
+#### Request
+
+`UpdateApplicationRolesRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | An identifier of an application |
+| `String[]` | `applicationRoles` | Application roles to be assigned to the application |
+
+#### Response
+
+`UpdateApplicationRolesResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `Long` | `applicationId` | The identifier of the application |
+| `String[]` | `applicationRoles` | Application roles assigned to the application after the update |
+
+### Method `removeApplicationFlags`
+
+Remove application roles from an activation.
+
+#### Request
+
+`RemoveApplicationRolesRequest`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `applicationId` | An identifier of an application |
+| `String[]` | `applicationRoles` | Application roles to be removed from the application |
+
+#### Response
+
+`RemoveApplicationRolesResponse`
+
+| Type | Name | Description |
+|------|------|-------------|
+| `String` | `applicationId` | An identifier of an application |
+| `String[]` | `applicationRoles` | Application roles assigned to the application after the removal |
+
+
 ## Activation management (v2)
 
 ### Method 'prepareActivation' (v2)
 
-Assure a key exchange between PowerAuth Client and PowerAuth Server and prepare the activation with given ID to be committed. Only activations in CREATED state can be prepared. After successfully calling this method, activation is in OTP_USED state.
+Assure a key exchange between PowerAuth Client and PowerAuth Server and prepare the activation with given ID to be committed. Only activations in CREATED state can be prepared. After successfully calling this method, activation is in PENDING_COMMIT state.
 
 #### Request
 
@@ -1545,7 +1798,7 @@ Assure a key exchange between PowerAuth Client and PowerAuth Server and prepare 
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `activationNonce` | A base64 encoded activation nonce |
 | `String` | `ephemeralPublicKey` | A base64 encoded ephemeral public key for ECIES |
 | `String` | `encryptedServerPublicKey` | A base64 encoded encrypted server public key |
@@ -1553,7 +1806,7 @@ Assure a key exchange between PowerAuth Client and PowerAuth Server and prepare 
 
 ### Method 'createActivation' (v2)
 
-Create an activation for given user and application, with provided maximum number of failed attempts and expiration timestamp, including a key exchange between PowerAuth Client and PowerAuth Server. Prepare the activation to be committed later. After successfully calling this method, activation is in OTP_USED state.
+Create an activation for given user and application, with provided maximum number of failed attempts and expiration timestamp, including a key exchange between PowerAuth Client and PowerAuth Server. Prepare the activation to be committed later. After successfully calling this method, activation is in PENDING_COMMIT state.
 
 #### Request
 
@@ -1580,7 +1833,7 @@ Create an activation for given user and application, with provided maximum numbe
 
 | Type | Name | Description |
 |------|------|-------------|
-| `String` | `activationId` | An UUID4 identifier of an activation |
+| `String` | `activationId` | A UUID4 identifier of an activation |
 | `String` | `activationNonce` | A base64 encoded activation nonce |
 | `String` | `ephemeralPublicKey` | A base64 encoded ephemeral public key for ECIES |
 | `String` | `encryptedServerPublicKey` | A base64 encoded encrypted server public key |
@@ -1703,7 +1956,7 @@ This chapter lists all enums used by PowerAuth Server SOAP service.
 
 - `ActivationStatus` - Represents the status of activation, one of the following values:
     - CREATED
-    - OTP_USED
+    - PENDING_COMMIT
     - ACTIVE
     - BLOCKED
     - REMOVED

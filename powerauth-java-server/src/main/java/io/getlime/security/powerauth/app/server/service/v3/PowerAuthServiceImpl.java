@@ -18,6 +18,7 @@
 package io.getlime.security.powerauth.app.server.service.v3;
 
 import com.google.common.io.BaseEncoding;
+import com.wultra.security.powerauth.client.v3.*;
 import io.getlime.security.powerauth.app.server.configuration.PowerAuthServiceConfiguration;
 import io.getlime.security.powerauth.app.server.converter.v3.ActivationStatusConverter;
 import io.getlime.security.powerauth.app.server.converter.v3.XMLGregorianCalendarConverter;
@@ -30,7 +31,6 @@ import io.getlime.security.powerauth.app.server.service.i18n.LocalizationProvide
 import io.getlime.security.powerauth.app.server.service.model.ServiceError;
 import io.getlime.security.powerauth.crypto.lib.encryptor.ecies.model.EciesCryptogram;
 import io.getlime.security.powerauth.crypto.lib.util.KeyConvertor;
-import io.getlime.security.powerauth.v3.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,7 +109,7 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         logger.info("GetErrorCodeListRequest received");
         String language = request.getLanguage();
         // Check if the language is valid ISO language, use EN as default
-        if (Arrays.binarySearch(Locale.getISOLanguages(), language) < 0) {
+        if (language == null || Arrays.binarySearch(Locale.getISOLanguages(), language) < 0) {
             language = Locale.ENGLISH.getLanguage();
         }
         Locale locale = new Locale(language);
@@ -141,8 +141,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             GetActivationListForUserResponse response = behavior.getActivationServiceBehavior().getActivationList(applicationId, userId);
             logger.info("GetActivationListForUserRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -173,12 +173,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             if (request.getActivationStatus() != null) {
                 activationStatus = activationStatusConverter.convert(request.getActivationStatus());
             }
+            List<String> activationFlags = request.getActivationFlags();
             logger.info("LookupActivationsRequest received");
-            LookupActivationsResponse response = behavior.getActivationServiceBehavior().lookupActivations(userIds, applicationIds, timestampLastUsedBefore, timestampLastUsedAfter, activationStatus);
+            LookupActivationsResponse response = behavior.getActivationServiceBehavior().lookupActivations(userIds, applicationIds, timestampLastUsedBefore, timestampLastUsedAfter, activationStatus, activationFlags);
             logger.info("LookupActivationsRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -204,8 +205,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             UpdateStatusForActivationsResponse response = behavior.getActivationServiceBehavior().updateStatusForActivation(activationIds, activationStatus);
             logger.info("UpdateStatusForActivationsRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -231,8 +232,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -271,8 +272,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -303,8 +304,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -347,8 +348,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -390,8 +391,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -417,8 +418,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -444,8 +445,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -481,8 +482,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -509,8 +510,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -537,8 +538,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -557,7 +558,11 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             String activationId = request.getActivationId();
             String externalUserId = request.getExternalUserId();
-            boolean revokeRecoveryCodes = request.isRevokeRecoveryCodes();
+            Boolean revokeRecoveryCodes = request.isRevokeRecoveryCodes();
+            if (revokeRecoveryCodes == null) {
+                // The default value is false for revokeRecoveryCodes
+                revokeRecoveryCodes = false;
+            }
             logger.info("RemoveActivationRequest received, activation ID: {}, revoke recovery codes: {}", activationId, revokeRecoveryCodes);
             RemoveActivationResponse response = behavior.getActivationServiceBehavior().removeActivation(activationId, externalUserId, revokeRecoveryCodes);
             logger.info("RemoveActivationRequest succeeded");
@@ -565,8 +570,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -593,8 +598,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -620,8 +625,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -676,8 +681,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -706,8 +711,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -734,8 +739,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             SignatureAuditResponse response = behavior.getAuditingServiceBehavior().getSignatureAuditLog(userId, applicationId, startingDate, endingDate);
             logger.info("SignatureAuditRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -760,8 +765,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             ActivationHistoryResponse response = behavior.getActivationHistoryServiceBehavior().getActivationHistory(activationId, startingDate, endingDate);
             logger.info("ActivationHistoryRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -777,8 +782,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             GetApplicationListResponse response = behavior.getApplicationServiceBehavior().getApplicationList();
             logger.info("GetApplicationListRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -806,8 +811,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -831,8 +836,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -856,8 +861,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -881,8 +886,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -901,8 +906,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -921,8 +926,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -943,8 +948,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             CreateIntegrationResponse response = behavior.getIntegrationBehavior().createIntegration(request);
             logger.info("CreateIntegrationRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -954,14 +959,14 @@ public class PowerAuthServiceImpl implements PowerAuthService {
 
     @Override
     @Transactional
-    public GetIntegrationListResponse getIntegrationList() throws GenericServiceException {
+    public GetIntegrationListResponse getIntegrationList(GetIntegrationListRequest request) throws GenericServiceException {
         try {
             logger.info("GetIntegrationListRequest received");
             GetIntegrationListResponse response = behavior.getIntegrationBehavior().getIntegrationList();
             logger.info("GetIntegrationListRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -977,8 +982,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             RemoveIntegrationResponse response = behavior.getIntegrationBehavior().removeIntegration(request);
             logger.info("RemoveIntegrationRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1002,8 +1007,32 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public UpdateCallbackUrlResponse updateCallbackUrl(UpdateCallbackUrlRequest request) throws Exception {
+        if (request.getId() == null || request.getApplicationId() <= 0 || request.getName() == null || request.getAttributes() == null) {
+            logger.warn("Invalid request in method updateCallbackUrl");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("UpdateCallbackUrlRequest received, name: {}", request.getName());
+            UpdateCallbackUrlResponse response = behavior.getCallbackUrlBehavior().updateCallbackUrl(request);
+            logger.info("UpdateCallbackUrlRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1019,8 +1048,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             GetCallbackUrlListResponse response = behavior.getCallbackUrlBehavior().getCallbackUrlList(request);
             logger.info("GetCallbackUrlListRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1036,8 +1065,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             RemoveCallbackUrlResponse response = behavior.getCallbackUrlBehavior().removeCallbackUrl(request);
             logger.info("RemoveCallbackUrlRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1061,8 +1090,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1092,8 +1121,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1114,8 +1143,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             RemoveTokenResponse response = behavior.getTokenBehavior().removeToken(request);
             logger.info("RemoveTokenRequest succeeded");
             return response;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1140,8 +1169,8 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1160,13 +1189,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("StartUpgradeRequest received, application key: {}, activation ID: {}", request.getApplicationKey(), request.getActivationId());
             StartUpgradeResponse response = behavior.getUpgradeServiceBehavior().startUpgrade(request);
-            logger.info("StartUpgradeRequest succeeeded");
+            logger.info("StartUpgradeRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1185,13 +1214,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("CommitUpgradeRequest received, application key: {}, activation ID: {}", request.getApplicationKey(), request.getActivationId());
             CommitUpgradeResponse response = behavior.getUpgradeServiceBehavior().commitUpgrade(request);
-            logger.info("CommitUpgradeRequest succeeeded");
+            logger.info("CommitUpgradeRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1210,13 +1239,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("CreateRecoveryCodeRequest received, application ID: {}, user ID: {}", request.getApplicationId(), request.getUserId());
             CreateRecoveryCodeResponse response = behavior.getRecoveryServiceBehavior().createRecoveryCode(request, keyConvertor);
-            logger.info("CreateRecoveryCodeRequest succeeeded");
+            logger.info("CreateRecoveryCodeRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1236,13 +1265,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("ConfirmRecoveryCodeRequest received, activation ID: {}, application key: {}", request.getActivationId(), request.getApplicationKey());
             ConfirmRecoveryCodeResponse response = behavior.getRecoveryServiceBehavior().confirmRecoveryCode(request, keyConvertor);
-            logger.info("ConfirmRecoveryCodeRequest succeeeded");
+            logger.info("ConfirmRecoveryCodeRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1261,13 +1290,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("LookupRecoveryCodesRequest received, application ID: {}, user ID: {}, activation ID: {}", request.getApplicationId(), request.getUserId(), request.getActivationId());
             LookupRecoveryCodesResponse response = behavior.getRecoveryServiceBehavior().lookupRecoveryCodes(request);
-            logger.info("LookupRecoveryCodesRequest succeeeded");
+            logger.info("LookupRecoveryCodesRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1286,13 +1315,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("RevokeRecoveryCodesRequest received, recovery code IDs: {}", request.getRecoveryCodeIds());
             RevokeRecoveryCodesResponse response = behavior.getRecoveryServiceBehavior().revokeRecoveryCodes(request);
-            logger.info("RevokeRecoveryCodesRequest succeeeded");
+            logger.info("RevokeRecoveryCodesRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1312,13 +1341,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("RecoveryCodeActivationRequest received, recovery code: {}, application key: {}", request.getRecoveryCode(), request.getApplicationKey());
             RecoveryCodeActivationResponse response = behavior.getActivationServiceBehavior().createActivationUsingRecoveryCode(request, keyConvertor);
-            logger.info("RecoveryCodeActivationRequest succeeeded");
+            logger.info("RecoveryCodeActivationRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1337,13 +1366,13 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             logger.info("GetRecoveryConfigRequest received, application ID: {}", request.getApplicationId());
             GetRecoveryConfigResponse response = behavior.getRecoveryServiceBehavior().getRecoveryConfig(request);
-            logger.info("GetRecoveryConfigRequest succeeeded");
+            logger.info("GetRecoveryConfigRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);
@@ -1360,15 +1389,259 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
         }
         try {
-            logger.info("GetRecoveryConfigRequest received, application ID: {}", request.getApplicationId());
+            logger.info("UpdateRecoveryConfigRequest received, application ID: {}", request.getApplicationId());
             UpdateRecoveryConfigResponse response = behavior.getRecoveryServiceBehavior().updateRecoveryConfig(request, keyConvertor);
-            logger.info("GetRecoveryConfigRequest succeeeded");
+            logger.info("UpdateRecoveryConfigRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged
             throw ex;
-        } catch (RuntimeException ex) {
-            logger.error("Runtime exception occurred, transaction will be rolled back", ex);
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public ListActivationFlagsResponse listActivationFlags(ListActivationFlagsRequest request) throws GenericServiceException {
+        if (request.getActivationId() == null) {
+            logger.warn("Invalid request parameter activationId in method listActivationFlags");
+            // Rollback is not required, database is not used for writing
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("ListActivationFlagsRequest received, activation ID: {}", request.getActivationId());
+            String activationId = request.getActivationId();
+            ListActivationFlagsResponse response = behavior.getActivationFlagsServiceBehavior().listActivationFlags(activationId);
+            logger.info("ListActivationFlagsRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public AddActivationFlagsResponse addActivationFlags(AddActivationFlagsRequest request) throws GenericServiceException {
+        if (request.getActivationId() == null) {
+            logger.warn("Invalid request parameter activationId in method addActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getActivationFlags() == null || request.getActivationFlags().isEmpty()) {
+            logger.warn("Invalid request parameter activationFlags in method addActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("addActivationFlagsRequest received, activation ID: {}", request.getActivationId());
+            String activationId = request.getActivationId();
+            List<String> flags = request.getActivationFlags();
+            AddActivationFlagsResponse response = behavior.getActivationFlagsServiceBehavior().addActivationFlags(activationId, flags);
+            logger.info("addActivationFlagsRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public UpdateActivationFlagsResponse updateActivationFlags(UpdateActivationFlagsRequest request) throws GenericServiceException {
+        if (request.getActivationId() == null) {
+            logger.warn("Invalid request parameter activationId in method updateActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getActivationFlags() == null || request.getActivationFlags().isEmpty()) {
+            logger.warn("Invalid request parameter activationFlags in method updateActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("UpdateActivationFlagsRequest received, activation ID: {}", request.getActivationId());
+            String activationId = request.getActivationId();
+            List<String> flags = request.getActivationFlags();
+            UpdateActivationFlagsResponse response = behavior.getActivationFlagsServiceBehavior().updateActivationFlags(activationId, flags);
+            logger.info("UpdateActivationFlagsRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public RemoveActivationFlagsResponse removeActivationFlags(RemoveActivationFlagsRequest request) throws GenericServiceException {
+        if (request.getActivationId() == null) {
+            logger.warn("Invalid request parameter activationId in method removeActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getActivationFlags() == null || request.getActivationFlags().isEmpty()) {
+            logger.warn("Invalid request parameter activationFlags in method removeActivationFlags");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("RemoveActivationFlagsRequest received, activation ID: {}", request.getActivationId());
+            String activationId = request.getActivationId();
+            List<String> flags = request.getActivationFlags();
+            RemoveActivationFlagsResponse response = behavior.getActivationFlagsServiceBehavior().removeActivationFlags(activationId, flags);
+            logger.info("RemoveActivationFlagsRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public ListApplicationRolesResponse listApplicationRoles(ListApplicationRolesRequest request) throws Exception {
+        if (request.getApplicationId() <= 0L) {
+            logger.warn("Invalid request parameter applicationId in method listApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("ListApplicationRolesRequest received, application ID: {}", request.getApplicationId());
+            long applicationId = request.getApplicationId();
+            ListApplicationRolesResponse response = behavior.getApplicationRolesServiceBehavior().listApplicationRoles(applicationId);
+            logger.info("ListApplicationRolesRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public AddApplicationRolesResponse addApplicationRoles(AddApplicationRolesRequest request) throws Exception {
+        if (request.getApplicationId() <= 0L) {
+            logger.warn("Invalid request parameter applicationId in method addApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getApplicationRoles() == null || request.getApplicationRoles().isEmpty()) {
+            logger.warn("Invalid request parameter applicationRoles in method addApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("AddApplicationRolesRequest received, application ID: {}", request.getApplicationId());
+            long applicationId = request.getApplicationId();
+            List<String> applicationRoles = request.getApplicationRoles();
+            AddApplicationRolesResponse response = behavior.getApplicationRolesServiceBehavior().addApplicationRoles(applicationId, applicationRoles);
+            logger.info("AddApplicationRolesRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public UpdateApplicationRolesResponse updateApplicationRoles(UpdateApplicationRolesRequest request) throws Exception {
+        if (request.getApplicationId() <= 0L) {
+            logger.warn("Invalid request parameter applicationId in method updateApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getApplicationRoles() == null || request.getApplicationRoles().isEmpty()) {
+            logger.warn("Invalid request parameter applicationRoles in method updateApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("UpdateApplicationRolesRequest received, application ID: {}", request.getApplicationId());
+            long applicationId = request.getApplicationId();
+            List<String> applicationRoles = request.getApplicationRoles();
+            UpdateApplicationRolesResponse response = behavior.getApplicationRolesServiceBehavior().updateApplicationRoles(applicationId, applicationRoles);
+            logger.info("UpdateApplicationRolesRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    @Transactional
+    public RemoveApplicationRolesResponse removeApplicationRoles(RemoveApplicationRolesRequest request) throws Exception {
+        if (request.getApplicationId() <= 0L) {
+            logger.warn("Invalid request parameter applicationId in method removeApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        if (request.getApplicationRoles() == null || request.getApplicationRoles().isEmpty()) {
+            logger.warn("Invalid request parameter applicationRoles in method removeApplicationRoles");
+            // Rollback is not required, error occurs before writing to database
+            throw localizationProvider.buildExceptionForCode(ServiceError.INVALID_REQUEST);
+        }
+        try {
+            logger.info("RemoveApplicationRolesRequest received, application ID: {}", request.getApplicationId());
+            long applicationId = request.getApplicationId();
+            List<String> applicationRoles = request.getApplicationRoles();
+            RemoveApplicationRolesResponse response = behavior.getApplicationRolesServiceBehavior().removeApplicationRoles(applicationId, applicationRoles);
+            logger.info("RemoveApplicationRolesRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
             throw ex;
         } catch (Exception ex) {
             logger.error("Unknown error occurred", ex);

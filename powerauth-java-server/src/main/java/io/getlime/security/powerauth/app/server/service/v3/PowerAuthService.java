@@ -17,7 +17,7 @@
  */
 package io.getlime.security.powerauth.app.server.service.v3;
 
-import io.getlime.security.powerauth.v3.*;
+import com.wultra.security.powerauth.client.v3.*;
 
 /**
  * Interface containing all methods that are published by the PowerAuth 3.0 Server
@@ -91,7 +91,7 @@ public interface PowerAuthService {
 
     /**
      * Receive a PowerAuth 3.0 Client public key and return own PowerAuth 3.0 Server public key. The
-     * activation with provided ID is in OTP_USED or ACTIVE state after calling this method, depending on
+     * activation with provided ID is in PENDING_COMMIT or ACTIVE state after calling this method, depending on
      * presence of activation OTP in encrypted data.
      *
      * <p><b>PowerAuth protocol versions:</b>
@@ -106,9 +106,9 @@ public interface PowerAuthService {
     PrepareActivationResponse prepareActivation(PrepareActivationRequest request) throws Exception;
 
     /**
-     * Create a new activation in OTP_USED state, without the InitActivation / PrepareActivation cycle.
+     * Create a new activation in PENDING_COMMIT state, without the InitActivation / PrepareActivation cycle.
      * This method receives a PowerAuth 3.0 Client public key and returns own PowerAuth 3.0 Server public key.
-     * The activation with is in OTP_USED state after calling this method.
+     * The activation with is in PENDING_COMMIT state after calling this method.
      *
      * Note: This method should be used in case of activation performed directly, without the external
      * master front end application.
@@ -180,7 +180,7 @@ public interface PowerAuthService {
     UpdateActivationOtpResponse updateActivationOtp(UpdateActivationOtpRequest request) throws Exception;
 
     /**
-     * Commit a created activation. Only activations in OTP_USED state can be committed - in case activation
+     * Commit a created activation. Only activations in PENDING_COMMIT state can be committed - in case activation
      * is in other state, exception is raised. In case of successful call of this method, activation with
      * provided ID is in ACTIVE state.
      *
@@ -339,10 +339,11 @@ public interface PowerAuthService {
 
     /**
      * Get the list of currently present integrations.
+     * @param request Get integration list request.
      * @return List of currently present integrations.
      * @throws Exception In case of a business logic error.
      */
-    GetIntegrationListResponse getIntegrationList() throws Exception;
+    GetIntegrationListResponse getIntegrationList(GetIntegrationListRequest request) throws Exception;
 
     /**
      * Remove integration with given ID.
@@ -359,6 +360,14 @@ public interface PowerAuthService {
      * @throws Exception In case of a business logic error.
      */
     CreateCallbackUrlResponse createCallbackUrl(CreateCallbackUrlRequest request) throws Exception;
+
+    /**
+     * Update callback URL for given application.
+     * @param request Request with application ID and callback URL parameters.
+     * @return New callback URL information.
+     * @throws Exception In case of a business logic error.
+     */
+    UpdateCallbackUrlResponse updateCallbackUrl(UpdateCallbackUrlRequest request) throws Exception;
 
     /**
      * Get the list of all callback URLs for given application.
@@ -485,4 +494,70 @@ public interface PowerAuthService {
      * @throws Exception In case of a business logic error.
      */
     UpdateRecoveryConfigResponse updateRecoveryConfig(UpdateRecoveryConfigRequest request) throws Exception;
+
+    /**
+     * List activation flags.
+     * @param request List activation flags request.
+     * @return List activation flags response.
+     * @throws Exception In case of a business logic error.
+     */
+    ListActivationFlagsResponse listActivationFlags(ListActivationFlagsRequest request) throws Exception;
+
+    /**
+     * Add activation flags.
+     * @param request Add activation flags request.
+     * @return Create activation flags response.
+     * @throws Exception In case of a business logic error.
+     */
+    AddActivationFlagsResponse addActivationFlags(AddActivationFlagsRequest request) throws Exception;
+
+    /**
+     * Update activation flags.
+     * @param request Update activation flags request.
+     * @return Update activation flags response.
+     * @throws Exception In case of a business logic error.
+     */
+    UpdateActivationFlagsResponse updateActivationFlags(UpdateActivationFlagsRequest request) throws Exception;
+
+    /**
+     * Remove activation flags.
+     * @param request Remove activation flags request.
+     * @return Delete activation flags response.
+     * @throws Exception In case of a business logic error.
+     */
+    RemoveActivationFlagsResponse removeActivationFlags(RemoveActivationFlagsRequest request) throws Exception;
+
+
+    /**
+     * List application roles.
+     * @param request List application roles request.
+     * @return List application roles response.
+     * @throws Exception In case of a business logic error.
+     */
+    ListApplicationRolesResponse listApplicationRoles(ListApplicationRolesRequest request) throws Exception;
+
+    /**
+     * Add application roles.
+     * @param request Add application roles request.
+     * @return Create application roles response.
+     * @throws Exception In case of a business logic error.
+     */
+    AddApplicationRolesResponse addApplicationRoles(AddApplicationRolesRequest request) throws Exception;
+
+    /**
+     * Update application roles.
+     * @param request Update application roles request.
+     * @return Update application roles response.
+     * @throws Exception In case of a business logic error.
+     */
+    UpdateApplicationRolesResponse updateApplicationRoles(UpdateApplicationRolesRequest request) throws Exception;
+
+    /**
+     * Remove application roles.
+     * @param request Remove application roles request.
+     * @return Delete application roles response.
+     * @throws Exception In case of a business logic error.
+     */
+    RemoveApplicationRolesResponse removeApplicationRoles(RemoveApplicationRolesRequest request) throws Exception;
+
 }
