@@ -230,7 +230,7 @@ public class ActivationServiceBehavior {
             }
 
             // Make sure to deactivate the activation if it is expired
-            // Search for activation again to aquire PESSIMISTIC_WRITE lock for activation row
+            // Search for activation again to acquire PESSIMISTIC_WRITE lock for activation row
             activation = activationRepository.findActivationWithLock(activation.getActivationId());
             deactivatePendingActivation(timestamp, activation);
 
@@ -436,7 +436,7 @@ public class ActivationServiceBehavior {
             byte[] C_devicePublicKey = BaseEncoding.base64().decode(cDevicePublicKeyBase64);
             byte[] activationNonce = BaseEncoding.base64().decode(activationNonceBase64);
 
-            PublicKey devicePublicKey = null;
+            PublicKey devicePublicKey;
             try {
                 devicePublicKey = powerAuthServerActivation.decryptDevicePublicKey(
                         C_devicePublicKey,

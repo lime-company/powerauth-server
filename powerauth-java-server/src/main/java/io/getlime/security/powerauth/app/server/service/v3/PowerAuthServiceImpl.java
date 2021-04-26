@@ -18,6 +18,10 @@
 package io.getlime.security.powerauth.app.server.service.v3;
 
 import com.google.common.io.BaseEncoding;
+import com.wultra.security.powerauth.client.model.request.*;
+import com.wultra.security.powerauth.client.model.response.OperationUserActionResponse;
+import com.wultra.security.powerauth.client.model.response.OperationDetailResponse;
+import com.wultra.security.powerauth.client.model.response.OperationListResponse;
 import com.wultra.security.powerauth.client.v3.*;
 import io.getlime.security.powerauth.app.server.configuration.PowerAuthServiceConfiguration;
 import io.getlime.security.powerauth.app.server.converter.v3.ActivationStatusConverter;
@@ -61,6 +65,12 @@ public class PowerAuthServiceImpl implements PowerAuthService {
     private BuildProperties buildProperties;
 
     private final ActivationStatusConverter activationStatusConverter = new ActivationStatusConverter();
+
+    // Minimum date for SQL timestamps: 01/01/1970 @ 12:00am (UTC)
+    private static final Date MIN_TIMESTAMP = new Date(1L);
+
+    // Maximum date for SQL timestamps: 01/01/9999 @ 12:00am (UTC)
+    private static final Date MAX_TIMESTAMP = new Date(253370764800000L);
 
     // Prepare logger
     private static final Logger logger = LoggerFactory.getLogger(PowerAuthServiceImpl.class);
@@ -161,13 +171,17 @@ public class PowerAuthServiceImpl implements PowerAuthService {
         try {
             List<String> userIds = request.getUserIds();
             List<Long> applicationIds = request.getApplicationIds();
-            Date timestampLastUsedBefore = null;
+            Date timestampLastUsedBefore;
             if (request.getTimestampLastUsedBefore() != null) {
                 timestampLastUsedBefore = XMLGregorianCalendarConverter.convertTo(request.getTimestampLastUsedBefore());
+            } else {
+                timestampLastUsedBefore = MAX_TIMESTAMP;
             }
-            Date timestampLastUsedAfter = null;
+            Date timestampLastUsedAfter;
             if (request.getTimestampLastUsedAfter() != null) {
                 timestampLastUsedAfter = XMLGregorianCalendarConverter.convertTo(request.getTimestampLastUsedAfter());
+            } else {
+                timestampLastUsedAfter = MIN_TIMESTAMP;
             }
             ActivationStatus activationStatus = null;
             if (request.getActivationStatus() != null) {
@@ -1636,6 +1650,169 @@ public class PowerAuthServiceImpl implements PowerAuthService {
             List<String> applicationRoles = request.getApplicationRoles();
             RemoveApplicationRolesResponse response = behavior.getApplicationRolesServiceBehavior().removeApplicationRoles(applicationId, applicationRoles);
             logger.info("RemoveApplicationRolesRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationDetailResponse createOperation(OperationCreateRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("CreateOperationRequest received, template name: {}, user ID: {}, application ID: {}", request.getTemplateName(), request.getUserId(), request.getApplicationId());
+            OperationDetailResponse response = behavior.getOperationBehavior().createOperation(request);
+            logger.info("CreateOperationRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationDetailResponse operationDetail(OperationDetailRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationDetailRequest received, operation ID: {}", request.getOperationId());
+            OperationDetailResponse response = behavior.getOperationBehavior().getOperation(request);
+            logger.info("OperationDetailRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationListResponse findPendingOperationsForUser(OperationListForUserRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationListForUserRequest received, user ID: {}, appId: {}", request.getUserId(), request.getApplicationId());
+            OperationListResponse response = behavior.getOperationBehavior().findPendingOperationsForUser(request);
+            logger.info("OperationListForUserRequest succeeded");
+            return response;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationListResponse findAllOperationsForUser(OperationListForUserRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationListForUserRequest received, user ID: {}, appId: {}", request.getUserId(), request.getApplicationId());
+            OperationListResponse response = behavior.getOperationBehavior().findAllOperationsForUser(request);
+            logger.info("OperationListForUserRequest succeeded");
+            return response;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationDetailResponse cancelOperation(OperationCancelRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationCancelRequest received, operation ID: {}", request.getOperationId());
+            OperationDetailResponse response = behavior.getOperationBehavior().cancelOperation(request);
+            logger.info("OperationCancelRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationUserActionResponse approveOperation(OperationApproveRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationApproveRequest received, operation ID: {}, user ID: {}, application ID: {}, signatureType: {}",
+                    request.getOperationId(),
+                    request.getUserId(),
+                    request.getApplicationId(),
+                    request.getSignatureType()
+            );
+            OperationUserActionResponse response = behavior.getOperationBehavior().attemptApproveOperation(request);
+            logger.info("OperationApproveRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationUserActionResponse rejectOperation(OperationRejectRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationRejectRequest received, operation ID: {}, user ID: {}, application ID: {}",
+                    request.getOperationId(),
+                    request.getUserId(),
+                    request.getApplicationId()
+            );
+            OperationUserActionResponse response = behavior.getOperationBehavior().rejectOperation(request);
+            logger.info("OperationRejectRequest succeeded");
+            return response;
+        } catch (GenericServiceException ex) {
+            // already logged
+            throw ex;
+        } catch (RuntimeException | Error ex) {
+            logger.error("Runtime exception or error occurred, transaction will be rolled back", ex);
+            throw ex;
+        } catch (Exception ex) {
+            logger.error("Unknown error occurred", ex);
+            throw new GenericServiceException(ServiceError.UNKNOWN_ERROR, ex.getMessage(), ex.getLocalizedMessage());
+        }
+    }
+
+    @Override
+    public OperationUserActionResponse failApprovalOperation(OperationFailApprovalRequest request) throws Exception {
+        // TODO: Validators
+        try {
+            logger.info("OperationFailApprovalRequest received, operation ID: {}", request.getOperationId());
+            OperationUserActionResponse response = behavior.getOperationBehavior().failApprovalOperation(request);
+            logger.info("OperationFailApprovalRequest succeeded");
             return response;
         } catch (GenericServiceException ex) {
             // already logged

@@ -20,6 +20,7 @@ package io.getlime.security.powerauth.app.server;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.security.Security;
 
@@ -29,6 +30,7 @@ import java.security.Security;
  * @author Petr Dvorak, petr@wultra.com
  */
 @SpringBootApplication
+@EnableScheduling
 public class Application {
 
     static {

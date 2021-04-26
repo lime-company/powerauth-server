@@ -20,38 +20,31 @@ package com.wultra.security.powerauth.rest.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.wultra.core.rest.client.base.DefaultRestClient;
+import com.wultra.core.rest.client.base.RestClient;
+import com.wultra.core.rest.client.base.RestClientException;
 import com.wultra.security.powerauth.client.PowerAuthClient;
 import com.wultra.security.powerauth.client.model.error.PowerAuthClientException;
 import com.wultra.security.powerauth.client.model.error.PowerAuthError;
 import com.wultra.security.powerauth.client.model.error.PowerAuthErrorRecovery;
+import com.wultra.security.powerauth.client.model.request.*;
+import com.wultra.security.powerauth.client.model.response.OperationDetailResponse;
+import com.wultra.security.powerauth.client.model.response.OperationListResponse;
+import com.wultra.security.powerauth.client.model.response.OperationUserActionResponse;
 import com.wultra.security.powerauth.client.v3.*;
 import io.getlime.core.rest.model.base.request.ObjectRequest;
 import io.getlime.core.rest.model.base.response.ObjectResponse;
-import io.netty.channel.ChannelOption;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.web.reactive.function.BodyInserters;
-import org.springframework.web.reactive.function.client.ExchangeFilterFunctions;
-import org.springframework.web.reactive.function.client.ExchangeStrategies;
-import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.netty.http.client.HttpClient;
-import reactor.netty.tcp.ProxyProvider;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 
-import javax.net.ssl.SSLException;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.List;
@@ -68,9 +61,7 @@ public class PowerAuthRestClient implements PowerAuthClient {
 
     private static final String PA_REST_V3_PREFIX = "/v3";
 
-    private String baseUrl;
-
-    private final WebClient webClient;
+    private final RestClient restClient;
     private final ObjectMapper objectMapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     /**
@@ -78,61 +69,35 @@ public class PowerAuthRestClient implements PowerAuthClient {
      *
      * @param baseUrl BASE URL of REST endpoints.
      */
-    public PowerAuthRestClient(String baseUrl) {
+    public PowerAuthRestClient(String baseUrl) throws PowerAuthClientException {
         this(baseUrl, new PowerAuthRestClientConfiguration());
     }
 
     /**
      * PowerAuth REST client constructor.
      *
-     * @param baseUrl BASE URL of REST endpoints.
+     * @param baseUrl Base URL of REST endpoints.
      */
-    public PowerAuthRestClient(String baseUrl, PowerAuthRestClientConfiguration config) {
-        WebClient.Builder builder = WebClient.builder().baseUrl(baseUrl);
-        HttpClient httpClient = HttpClient.create();
-        SslContext sslContext;
-        try {
-            if (config.getAcceptInvalidSslCertificate()) {
-                sslContext = SslContextBuilder
-                        .forClient()
-                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                        .build();
-                httpClient = httpClient.secure(sslContextSpec -> sslContextSpec.sslContext(sslContext));
+    public PowerAuthRestClient(String baseUrl, PowerAuthRestClientConfiguration config) throws PowerAuthClientException {
+        DefaultRestClient.Builder builder = DefaultRestClient.builder().baseUrl(baseUrl)
+                .acceptInvalidCertificate(config.getAcceptInvalidSslCertificate())
+                .connectionTimeout(config.getConnectTimeout())
+                .maxInMemorySize(config.getMaxMemorySize());
+        if (config.isProxyEnabled()) {
+            DefaultRestClient.ProxyBuilder proxyBuilder = builder.proxy().host(config.getProxyHost()).port(config.getProxyPort());
+            if (config.getProxyUsername() != null) {
+                proxyBuilder.username(config.getProxyUsername()).password(config.getProxyPassword());
             }
-        } catch (SSLException ex) {
-            logger.warn(ex.getMessage(), ex);
+            proxyBuilder.build();
         }
-        httpClient = httpClient.tcpConfiguration(tcpClient -> {
-            tcpClient = tcpClient.option(
-                    ChannelOption.CONNECT_TIMEOUT_MILLIS,
-                    config.getConnectTimeout());
-            if (config.isProxyEnabled()) {
-                tcpClient = tcpClient.proxy(proxySpec -> {
-                    ProxyProvider.Builder proxyBuilder = proxySpec
-                            .type(ProxyProvider.Proxy.HTTP)
-                            .host(config.getProxyHost())
-                            .port(config.getProxyPort());
-                    if (config.getProxyUsername() != null) {
-                        proxyBuilder.username(config.getProxyUsername());
-                        proxyBuilder.password(s -> config.getProxyPassword());
-                    }
-                    proxyBuilder.build();
-                });
-            }
-            return tcpClient;
-        });
-        builder.exchangeStrategies(ExchangeStrategies.builder()
-                .codecs(configurer -> configurer
-                        .defaultCodecs()
-                        .maxInMemorySize(config.getMaxMemorySize()))
-                .build());
         if (config.getPowerAuthClientToken() != null) {
-            builder.filter(ExchangeFilterFunctions
-                    .basicAuthentication(config.getPowerAuthClientToken(), config.getPowerAuthClientSecret()))
-                    .build();
+            builder.httpBasicAuth().username(config.getPowerAuthClientToken()).password(config.getPowerAuthClientSecret()).build();
         }
-        ReactorClientHttpConnector connector = new ReactorClientHttpConnector(httpClient);
-        this.webClient = builder.clientConnector(connector).build();
+        try {
+            restClient = builder.build();
+        } catch (RestClientException ex) {
+            throw new PowerAuthClientException("REST client initialization failed, error: " + ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -145,22 +110,10 @@ public class PowerAuthRestClient implements PowerAuthClient {
      */
     private <T> T callV3RestApi(String path, Object request, Class<T> responseType) throws PowerAuthClientException {
         ObjectRequest<?> objectRequest = new ObjectRequest<>(request);
-        ParameterizedTypeReference<ObjectResponse<T>> typeReference = new ParameterizedTypeReference<ObjectResponse<T>>(){
-            @Override
-            public Type getType() {
-                return TypeFactory.defaultInstance().constructParametricType(ObjectResponse.class, responseType);
-            }
-        };
-        ObjectResponse<T> objectResponse;
         try {
-            objectResponse = webClient.post()
-                    .uri(PA_REST_V3_PREFIX + path)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(BodyInserters.fromValue(objectRequest))
-                    .retrieve()
-                    .bodyToMono(typeReference)
-                    .block();
-        } catch (WebClientResponseException ex) {
+            ObjectResponse<T> objectResponse = restClient.postObject(PA_REST_V3_PREFIX + path, objectRequest, responseType);
+            return objectResponse.getResponseObject();
+        } catch (RestClientException ex) {
             if (ex.getStatusCode() == HttpStatus.BAD_REQUEST) {
                 // Error handling for PowerAuth errors
                 handleBadRequestError(ex);
@@ -168,10 +121,6 @@ public class PowerAuthRestClient implements PowerAuthClient {
             // Error handling for generic HTTP errors
             throw new PowerAuthClientException(ex.getMessage(), ex);
         }
-        if (objectResponse == null) {
-            throw new PowerAuthClientException("Invalid response object");
-        }
-        return objectResponse.getResponseObject();
     }
 
     /**
@@ -179,18 +128,18 @@ public class PowerAuthRestClient implements PowerAuthClient {
      * @param ex Exception which captured the error.
      * @throws PowerAuthClientException PowerAuth client exception.
      */
-    private void handleBadRequestError(WebClientResponseException ex) throws PowerAuthClientException {
+    private void handleBadRequestError(RestClientException ex) throws PowerAuthClientException {
         // Try to parse exception into PowerAuthError model class
         try {
             TypeReference<ObjectResponse<PowerAuthError>> typeReference = new TypeReference<ObjectResponse<PowerAuthError>>(){};
-            ObjectResponse<PowerAuthError> error = objectMapper.readValue(ex.getResponseBodyAsByteArray(), typeReference);
+            ObjectResponse<PowerAuthError> error = objectMapper.readValue(ex.getResponse(), typeReference);
             if (error == null || error.getResponseObject() == null) {
                 throw new PowerAuthClientException("Invalid response object");
             }
             if ("ERR_RECOVERY".equals(error.getResponseObject().getCode())) {
                 // In case of special recovery errors, return PowerAuthErrorRecovery which includes additional information about recovery
                 TypeReference<ObjectResponse<PowerAuthErrorRecovery>> PowerAuthErrorRecovery = new TypeReference<ObjectResponse<PowerAuthErrorRecovery>>(){};
-                ObjectResponse<PowerAuthErrorRecovery> errorRecovery = objectMapper.readValue(ex.getResponseBodyAsByteArray(), PowerAuthErrorRecovery);
+                ObjectResponse<PowerAuthErrorRecovery> errorRecovery = objectMapper.readValue(ex.getResponse(), PowerAuthErrorRecovery);
                 if (errorRecovery == null || errorRecovery.getResponseObject() == null) {
                     throw new PowerAuthClientException("Invalid response object for recovery");
                 }
@@ -1102,6 +1051,46 @@ public class PowerAuthRestClient implements PowerAuthClient {
     }
 
     @Override
+    public OperationDetailResponse createOperation(OperationCreateRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/create", request, OperationDetailResponse.class);
+    }
+
+    @Override
+    public OperationDetailResponse operationDetail(OperationDetailRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/detail", request, OperationDetailResponse.class);
+    }
+
+    @Override
+    public OperationListResponse operationList(OperationListForUserRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/list", request, OperationListResponse.class);
+    }
+
+    @Override
+    public OperationListResponse operationPendingList(OperationListForUserRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/list/pending", request, OperationListResponse.class);
+    }
+
+    @Override
+    public OperationDetailResponse operationCancel(OperationCancelRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/cancel", request, OperationDetailResponse.class);
+    }
+
+    @Override
+    public OperationUserActionResponse operationApprove(OperationApproveRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/approve", request, OperationUserActionResponse.class);
+    }
+
+    @Override
+    public OperationUserActionResponse failApprovalOperation(OperationFailApprovalRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/approve/fail", request, OperationUserActionResponse.class);
+    }
+
+    @Override
+    public OperationUserActionResponse operationReject(OperationRejectRequest request) throws PowerAuthClientException {
+        return callV3RestApi("/operation/reject", request, OperationUserActionResponse.class);
+    }
+
+    @Override
     public PowerAuthClientV2 v2() {
         return new PowerAuthServiceClientV2();
     }
@@ -1123,22 +1112,10 @@ public class PowerAuthRestClient implements PowerAuthClient {
          */
         private <T> T callV2RestApi(String path, Object request, Class<T> responseType) throws PowerAuthClientException {
             ObjectRequest<?> objectRequest = new ObjectRequest<>(request);
-            ParameterizedTypeReference<ObjectResponse<T>> typeReference = new ParameterizedTypeReference<ObjectResponse<T>>(){
-                @Override
-                public Type getType() {
-                    return TypeFactory.defaultInstance().constructParametricType(ObjectResponse.class, responseType);
-                }
-            };
-            ObjectResponse<T> objectResponse;
             try {
-                 objectResponse = webClient.post()
-                        .uri(PA_REST_V2_PREFIX + path)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .body(BodyInserters.fromValue(objectRequest))
-                        .retrieve()
-                        .bodyToMono(typeReference)
-                        .block();
-            } catch (WebClientResponseException ex) {
+                ObjectResponse<T> objectResponse = restClient.postObject(PA_REST_V2_PREFIX + path, objectRequest, responseType);
+                return objectResponse.getResponseObject();
+            } catch (RestClientException ex) {
                 if (ex.getStatusCode() == HttpStatus.BAD_REQUEST) {
                     // Error handling for PowerAuth errors
                     handleBadRequestError(ex);
@@ -1146,10 +1123,6 @@ public class PowerAuthRestClient implements PowerAuthClient {
                 // Error handling for generic HTTP errors
                 throw new PowerAuthClientException(ex.getMessage(), ex);
             }
-            if (objectResponse == null) {
-                throw new PowerAuthClientException("Invalid response object");
-            }
-            return objectResponse.getResponseObject();
         }
 
         @Override
