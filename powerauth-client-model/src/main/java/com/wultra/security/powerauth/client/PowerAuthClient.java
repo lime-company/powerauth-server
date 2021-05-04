@@ -17,16 +17,12 @@
  */
 package com.wultra.security.powerauth.client;
 
+import com.wultra.security.powerauth.client.model.entity.*;
+import com.wultra.security.powerauth.client.model.enumeration.ActivationStatus;
+import com.wultra.security.powerauth.client.model.enumeration.SignatureType;
 import com.wultra.security.powerauth.client.model.error.PowerAuthClientException;
 import com.wultra.security.powerauth.client.model.request.*;
-import com.wultra.security.powerauth.client.model.response.OperationDetailResponse;
-import com.wultra.security.powerauth.client.model.response.OperationListResponse;
-import com.wultra.security.powerauth.client.model.response.OperationUserActionResponse;
-import com.wultra.security.powerauth.client.v2.GetNonPersonalizedEncryptionKeyRequest;
-import com.wultra.security.powerauth.client.v2.GetNonPersonalizedEncryptionKeyResponse;
-import com.wultra.security.powerauth.client.v2.GetPersonalizedEncryptionKeyRequest;
-import com.wultra.security.powerauth.client.v2.GetPersonalizedEncryptionKeyResponse;
-import com.wultra.security.powerauth.client.v3.*;
+import com.wultra.security.powerauth.client.model.response.*;
 
 import java.util.Date;
 import java.util.List;
@@ -41,25 +37,16 @@ public interface PowerAuthClient {
     /**
      * Call the getSystemStatus method of the PowerAuth 3.0 Server interface.
      *
-     * @param request {@link GetSystemStatusRequest} instance
-     * @return {@link GetSystemStatusResponse}
-     * @throws PowerAuthClientException In case REST API call fails.
-     */
-    GetSystemStatusResponse getSystemStatus(GetSystemStatusRequest request) throws PowerAuthClientException;
-
-    /**
-     * Call the getSystemStatus method of the PowerAuth 3.0 Server interface.
-     *
      * @return {@link GetSystemStatusResponse}
      * @throws PowerAuthClientException In case REST API call fails.
      */
     GetSystemStatusResponse getSystemStatus() throws PowerAuthClientException;
 
     /**
-     * Call the getSystemStatus method of the PowerAuth 3.0 Server interface.
+     * Call the getErrorList method of the PowerAuth 3.0 Server interface.
      *
-     * @param request {@link GetSystemStatusRequest} instance
-     * @return {@link GetSystemStatusResponse}
+     * @param request {@link GetErrorCodeListRequest} instance
+     * @return {@link GetErrorCodeListResponse}
      * @throws PowerAuthClientException In case REST API call fails.
      */
     GetErrorCodeListResponse getErrorList(GetErrorCodeListRequest request) throws PowerAuthClientException;
@@ -67,11 +54,10 @@ public interface PowerAuthClient {
     /**
      * Call the getSystemStatus method of the PowerAuth 3.0 Server interface.
      *
-     * @param language ISO code for language.
      * @return {@link GetSystemStatusResponse}
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    GetErrorCodeListResponse getErrorList(String language) throws PowerAuthClientException;
+    GetErrorCodeListResponse getErrorList() throws PowerAuthClientException;
 
     /**
      * Call the initActivation method of the PowerAuth 3.0 Server interface.
@@ -102,7 +88,7 @@ public interface PowerAuthClient {
      * @return {@link InitActivationResponse}
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    InitActivationResponse initActivation(String userId, Long applicationId, ActivationOtpValidation otpValidation, String otp) throws PowerAuthClientException;
+    InitActivationResponse initActivation(String userId, Long applicationId, com.wultra.security.powerauth.client.model.enumeration.ActivationOtpValidation otpValidation, String otp) throws PowerAuthClientException;
 
     /**
      * Call the initActivation method of the PowerAuth 3.0 Server interface.
@@ -129,7 +115,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     InitActivationResponse initActivation(String userId, Long applicationId, Long maxFailureCount, Date timestampActivationExpire,
-                                          ActivationOtpValidation otpValidation, String otp) throws PowerAuthClientException;
+                                                                                              com.wultra.security.powerauth.client.model.enumeration.ActivationOtpValidation otpValidation, String otp) throws PowerAuthClientException;
 
     /**
      * Call the prepareActivation method of the PowerAuth 3.0 Server interface.
@@ -179,8 +165,8 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     CreateActivationResponse createActivation(String userId, Date timestampActivationExpire, Long maxFailureCount,
-                                              String applicationKey, String ephemeralPublicKey, String encryptedData,
-                                              String mac, String nonce) throws PowerAuthClientException;
+                                                                                                  String applicationKey, String ephemeralPublicKey, String encryptedData,
+                                                                                                  String mac, String nonce) throws PowerAuthClientException;
 
     /**
      * Call the updateActivationOtp method of PowerAuth 3.1 Server interface.
@@ -312,7 +298,7 @@ public interface PowerAuthClient {
      * @return List of activation instances for given user.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<GetActivationListForUserResponse.Activations> getActivationListForUser(String userId) throws PowerAuthClientException;
+    List<Activation> getActivationListForUser(String userId) throws PowerAuthClientException;
 
     /**
      * Call the lookupActivations method of the PowerAuth 3.0 Server interface.
@@ -335,7 +321,7 @@ public interface PowerAuthClient {
      * @return List of activation instances satisfying given query parameters.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<LookupActivationsResponse.Activations> lookupActivations(List<String> userIds, List<Long> applicationIds, Date timestampLastUsedBefore, Date timestampLastUsedAfter, ActivationStatus activationStatus, List<String> activationFlags) throws PowerAuthClientException;
+    List<Activation> lookupActivations(List<String> userIds, List<Long> applicationIds, Date timestampLastUsedBefore, Date timestampLastUsedAfter, ActivationStatus activationStatus, List<String> activationFlags) throws PowerAuthClientException;
 
     /**
      * Call the updateStatusForActivations method of the PowerAuth 3.0 Server interface.
@@ -465,8 +451,8 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     VaultUnlockResponse unlockVault(String activationId, String applicationKey, String signature,
-                                    SignatureType signatureType, String signatureVersion, String signedData,
-                                    String ephemeralPublicKey, String encryptedData, String mac, String nonce) throws PowerAuthClientException;
+                                                                                        SignatureType signatureType, String signatureVersion, String signedData,
+                                                                                        String ephemeralPublicKey, String encryptedData, String mac, String nonce) throws PowerAuthClientException;
 
     /**
      * Call the verifyECDSASignature method of the PowerAuth 3.0 Server interface.
@@ -504,10 +490,10 @@ public interface PowerAuthClient {
      * @param userId       User ID to query the audit log against.
      * @param startingDate Limit the results to given starting date (= "newer than").
      * @param endingDate   Limit the results to given ending date (= "older than").
-     * @return List of signature audit items. See: {@link com.wultra.security.powerauth.client.v3.SignatureAuditResponse.Items}.
+     * @return List of signature audit items.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<SignatureAuditResponse.Items> getSignatureAuditLog(String userId, Date startingDate, Date endingDate) throws PowerAuthClientException;
+    List<SignatureAuditItem> getSignatureAuditLog(String userId, Date startingDate, Date endingDate) throws PowerAuthClientException;
 
     /**
      * Call the verifySignature method of the PowerAuth 3.0 Server interface and get
@@ -517,10 +503,10 @@ public interface PowerAuthClient {
      * @param applicationId Application ID to query the audit log against.
      * @param startingDate  Limit the results to given starting date (= "newer than").
      * @param endingDate    Limit the results to given ending date (= "older than").
-     * @return List of signature audit items. See: {@link com.wultra.security.powerauth.client.v3.SignatureAuditResponse.Items}.
+     * @return List of signature audit items.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<SignatureAuditResponse.Items> getSignatureAuditLog(String userId, Long applicationId, Date startingDate, Date endingDate) throws PowerAuthClientException;
+    List<SignatureAuditItem> getSignatureAuditLog(String userId, Long applicationId, Date startingDate, Date endingDate) throws PowerAuthClientException;
 
     /**
      * Call the getActivationHistory method of the PowerAuth 3.0 Server interface.
@@ -537,10 +523,10 @@ public interface PowerAuthClient {
      * @param activationId Activation ID.
      * @param startingDate Limit the results to given starting date (= "newer than").
      * @param endingDate   Limit the results to given ending date (= "older than").
-     * @return List of activation history items. See: {@link com.wultra.security.powerauth.client.v3.ActivationHistoryResponse.Items}.
+     * @return List of activation history items.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<ActivationHistoryResponse.Items> getActivationHistory(String activationId, Date startingDate, Date endingDate) throws PowerAuthClientException;
+    List<ActivationHistoryItem> getActivationHistory(String activationId, Date startingDate, Date endingDate) throws PowerAuthClientException;
 
     /**
      * Call the blockActivation method of the PowerAuth 3.0 Server interface.
@@ -584,19 +570,10 @@ public interface PowerAuthClient {
     /**
      * Get the list of all applications that are registered in PowerAuth Server.
      *
-     * @param request {@link GetApplicationListRequest} instance.
      * @return {@link GetApplicationListResponse}
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    GetApplicationListResponse getApplicationList(GetApplicationListRequest request) throws PowerAuthClientException;
-
-    /**
-     * Get the list of all applications that are registered in PowerAuth Server.
-     *
-     * @return List of applications.
-     * @throws PowerAuthClientException In case REST API call fails.
-     */
-    List<GetApplicationListResponse.Applications> getApplicationList() throws PowerAuthClientException;
+    GetApplicationListResponse getApplicationList() throws PowerAuthClientException;
 
     /**
      * Return the detail of given application, including all application versions.
@@ -737,19 +714,10 @@ public interface PowerAuthClient {
     /**
      * Get the list of integrations.
      *
-     * @param request REST request object.
      * @return List of integrations.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    GetIntegrationListResponse getIntegrationList(GetIntegrationListRequest request) throws PowerAuthClientException;
-
-    /**
-     * Get the list of integrations.
-     *
-     * @return List of integrations.
-     * @throws PowerAuthClientException In case REST API call fails.
-     */
-    List<GetIntegrationListResponse.Items> getIntegrationList() throws PowerAuthClientException;
+    GetIntegrationListResponse getIntegrationList() throws PowerAuthClientException;
 
     /**
      * Remove integration with given ID.
@@ -828,7 +796,7 @@ public interface PowerAuthClient {
      * @return List of all callback URLs for given application.
      * @throws PowerAuthClientException In case REST API call fails.
      */
-    List<GetCallbackUrlListResponse.CallbackUrlList> getCallbackUrlList(Long applicationId) throws PowerAuthClientException;
+    List<CallbackUrl> getCallbackUrlList(Long applicationId) throws PowerAuthClientException;
 
     /**
      * Remove callback URL.
@@ -871,7 +839,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     CreateTokenResponse createToken(String activationId, String applicationKey, String ephemeralPublicKey,
-                                    String encryptedData, String mac, String nonce, SignatureType signatureType) throws PowerAuthClientException;
+                                                                                        String encryptedData, String mac, String nonce, SignatureType signatureType) throws PowerAuthClientException;
 
     /**
      * Validate credentials used for basic token-based authentication.
@@ -955,7 +923,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     StartUpgradeResponse startUpgrade(String activationId, String applicationKey, String ephemeralPublicKey,
-                                      String encryptedData, String mac, String nonce) throws PowerAuthClientException;
+                                                                                          String encryptedData, String mac, String nonce) throws PowerAuthClientException;
 
     /**
      * Commit upgrade of activations to version 3.
@@ -1018,7 +986,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     ConfirmRecoveryCodeResponse confirmRecoveryCode(String activationId, String applicationKey, String ephemeralPublicKey,
-                                                    String encryptedData, String mac, String nonce) throws PowerAuthClientException;
+                                                                                                        String encryptedData, String mac, String nonce) throws PowerAuthClientException;
 
     /**
      * Lookup recovery codes.
@@ -1041,7 +1009,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     LookupRecoveryCodesResponse lookupRecoveryCodes(String userId, String activationId, Long applicationId,
-                                                    RecoveryCodeStatus recoveryCodeStatus, RecoveryPukStatus recoveryPukStatus) throws PowerAuthClientException;
+                                                                                                        com.wultra.security.powerauth.client.model.enumeration.RecoveryCodeStatus recoveryCodeStatus, com.wultra.security.powerauth.client.model.enumeration.RecoveryPukStatus recoveryPukStatus) throws PowerAuthClientException;
 
     /**
      * Revoke recovery codes.
@@ -1085,7 +1053,7 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     RecoveryCodeActivationResponse createActivationUsingRecoveryCode(String recoveryCode, String puk, String applicationKey, Long maxFailureCount,
-                                                                     String ephemeralPublicKey, String encryptedData, String mac, String nonce) throws PowerAuthClientException;
+                                                                                                                         String ephemeralPublicKey, String encryptedData, String mac, String nonce) throws PowerAuthClientException;
 
     /**
      * Get recovery configuration.
@@ -1333,152 +1301,5 @@ public interface PowerAuthClient {
      * @throws PowerAuthClientException In case REST API call fails.
      */
     OperationUserActionResponse operationReject(OperationRejectRequest request) throws PowerAuthClientException;
-
-    /**
-     * Get the PowerAuth version 2 client (legacy).
-     * @return PowerAuth version 2 client.
-     */
-    PowerAuthClientV2 v2() throws PowerAuthClientException;
-
-    interface PowerAuthClientV2 {
-
-        /**
-         * Call the prepareActivation method of the PowerAuth 2.0 Server interface.
-         * @param request {@link com.wultra.security.powerauth.client.v2.PrepareActivationRequest} instance
-         * @return {@link com.wultra.security.powerauth.client.v2.PrepareActivationResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.PrepareActivationResponse prepareActivation(com.wultra.security.powerauth.client.v2.PrepareActivationRequest request) throws PowerAuthClientException;
-
-        /**
-         * Call the prepareActivation method of the PowerAuth 2.0 Server interface.
-         * @param activationIdShort Short activation ID.
-         * @param activationName Name of this activation.
-         * @param activationNonce Activation nonce.
-         * @param applicationKey Application key of a given application.
-         * @param applicationSignature Signature proving a correct application is sending the data.
-         * @param cDevicePublicKey Device public key encrypted with activation OTP.
-         * @param extras Additional, application specific information.
-         * @return {@link com.wultra.security.powerauth.client.v2.PrepareActivationResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.PrepareActivationResponse prepareActivation(String activationIdShort, String activationName, String activationNonce, String ephemeralPublicKey, String cDevicePublicKey, String extras, String applicationKey, String applicationSignature) throws PowerAuthClientException;
-
-        /**
-         * Create a new activation directly, using the createActivation method of the PowerAuth 2.0 Server interface.
-         * @param request Create activation request.
-         * @return Create activation response.
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.CreateActivationResponse createActivation(com.wultra.security.powerauth.client.v2.CreateActivationRequest request) throws PowerAuthClientException;
-
-        /**
-         * Call the createActivation method of the PowerAuth 2.0 Server interface.
-         * @param userId User ID.
-         * @param applicationKey Application key of a given application.
-         * @param identity Identity fingerprint used during activation.
-         * @param activationName Name of this activation.
-         * @param activationNonce Activation nonce.
-         * @param applicationSignature Signature proving a correct application is sending the data.
-         * @param cDevicePublicKey Device public key encrypted with activation OTP.
-         * @param ephemeralPublicKey Ephemeral public key used for one-time object transfer.
-         * @param extras Additional, application specific information.
-         * @return {@link com.wultra.security.powerauth.client.v2.CreateActivationResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.CreateActivationResponse createActivation(String applicationKey, String userId, String identity, String activationName, String activationNonce, String ephemeralPublicKey, String cDevicePublicKey, String extras, String applicationSignature) throws PowerAuthClientException;
-
-        /**
-         * Call the createActivation method of the PowerAuth 2.0 Server interface.
-         * @param userId User ID.
-         * @param maxFailureCount Maximum failure count.
-         * @param timestampActivationExpire Timestamp this activation should expire.
-         * @param applicationKey Application key of a given application.
-         * @param identity Identity fingerprint used during activation.
-         * @param activationOtp Activation OTP.
-         * @param activationName Name of this activation.
-         * @param activationNonce Activation nonce.
-         * @param applicationSignature Signature proving a correct application is sending the data.
-         * @param cDevicePublicKey Device public key encrypted with activation OTP.
-         * @param ephemeralPublicKey Ephemeral public key.
-         * @param extras Additional, application specific information.
-         * @return {@link com.wultra.security.powerauth.client.v2.CreateActivationResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.CreateActivationResponse createActivation(String applicationKey, String userId, Long maxFailureCount, Date timestampActivationExpire, String identity, String activationOtp, String activationName, String activationNonce, String ephemeralPublicKey, String cDevicePublicKey, String extras, String applicationSignature) throws PowerAuthClientException;
-
-        /**
-         * Call the vaultUnlock method of the PowerAuth 2.0 Server interface.
-         * @param request {@link com.wultra.security.powerauth.client.v2.VaultUnlockRequest} instance
-         * @return {@link com.wultra.security.powerauth.client.v2.VaultUnlockResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.VaultUnlockResponse unlockVault(com.wultra.security.powerauth.client.v2.VaultUnlockRequest request) throws PowerAuthClientException;
-
-        /**
-         * Call the vaultUnlock method of the PowerAuth 2.0 Server interface.
-         * @param activationId Activation Id of an activation to be used for authentication.
-         * @param applicationKey Application Key of an application related to the activation.
-         * @param data Data to be signed encoded in format as specified by PowerAuth 2.0 data normalization.
-         * @param signature Vault opening request signature.
-         * @param signatureType Vault opening request signature type.
-         * @param reason Reason why vault is being unlocked.
-         * @return {@link com.wultra.security.powerauth.client.v2.VaultUnlockResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.VaultUnlockResponse unlockVault(String activationId, String applicationKey, String data, String signature, com.wultra.security.powerauth.client.v2.SignatureType signatureType, String reason) throws PowerAuthClientException;
-
-        /**
-         * Call the generatePersonalizedE2EEncryptionKey method of the PowerAuth 2.0 Server interface.
-         * @param request {@link GetPersonalizedEncryptionKeyRequest} instance.
-         * @return {@link GetPersonalizedEncryptionKeyResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        GetPersonalizedEncryptionKeyResponse generatePersonalizedE2EEncryptionKey(GetPersonalizedEncryptionKeyRequest request) throws PowerAuthClientException;
-
-        /**
-         * Call the generatePersonalizedE2EEncryptionKey method of the PowerAuth 2.0 Server interface and get
-         * newly generated derived encryption key.
-         * @param activationId Activation ID used for the key generation.
-         * @return {@link GetPersonalizedEncryptionKeyResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        GetPersonalizedEncryptionKeyResponse generatePersonalizedE2EEncryptionKey(String activationId, String sessionIndex) throws PowerAuthClientException;
-
-        /**
-         * Call the generateNonPersonalizedE2EEncryptionKey method of the PowerAuth 2.0 Server interface.
-         * @param request {@link GetNonPersonalizedEncryptionKeyRequest} instance.
-         * @return {@link GetNonPersonalizedEncryptionKeyResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        GetNonPersonalizedEncryptionKeyResponse generateNonPersonalizedE2EEncryptionKey(GetNonPersonalizedEncryptionKeyRequest request) throws PowerAuthClientException;
-
-        /**
-         * Call the generateNonPersonalizedE2EEncryptionKey method of the PowerAuth 2.0 Server interface and get
-         * newly generated derived encryption key.
-         * @param applicationKey Application key of application used for the key generation.
-         * @return {@link GetNonPersonalizedEncryptionKeyResponse}
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        GetNonPersonalizedEncryptionKeyResponse generateNonPersonalizedE2EEncryptionKey(String applicationKey, String ephemeralPublicKeyBase64, String sessionIndex) throws PowerAuthClientException;
-
-        /**
-         * Create a new token for basic token-based authentication.
-         * @param request Request with token information.
-         * @return Response with created token.
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.CreateTokenResponse createToken(com.wultra.security.powerauth.client.v2.CreateTokenRequest request) throws PowerAuthClientException;
-
-        /**
-         * Create a new token for basic token-based authentication.
-         * @param activationId Activation ID for the activation that is associated with the token.
-         * @param ephemeralPublicKey Ephemeral public key used for response encryption.
-         * @param signatureType Type of the signature used for validating the create request.
-         * @return Response with created token.
-         * @throws PowerAuthClientException In case REST API call fails.
-         */
-        com.wultra.security.powerauth.client.v2.CreateTokenResponse createToken(String activationId, String ephemeralPublicKey, com.wultra.security.powerauth.client.v2.SignatureType signatureType) throws PowerAuthClientException;
-    }
 
 }
