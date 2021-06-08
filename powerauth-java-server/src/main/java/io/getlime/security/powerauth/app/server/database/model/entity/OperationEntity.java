@@ -18,16 +18,12 @@
 
 package io.getlime.security.powerauth.app.server.database.model.entity;
 
-import io.getlime.security.powerauth.app.server.database.model.OperationStatusDo;
-import io.getlime.security.powerauth.app.server.database.model.OperationStatusDoConverter;
-import io.getlime.security.powerauth.app.server.database.model.SignatureTypeConverter;
+import io.getlime.security.powerauth.app.server.database.model.*;
 import io.getlime.security.powerauth.crypto.lib.enums.PowerAuthSignatureTypes;
 
 import javax.persistence.*;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Entity representing an operation for approval.
@@ -44,46 +40,45 @@ public class OperationEntity implements Serializable {
     @Column(name = "id", updatable = false, length = 37)
     private String id;
 
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(name = "application_id")
-    private Long applicationId;
-
     @ManyToOne
-    @JoinColumn(name = "template_id", referencedColumnName = "id", nullable = false)
-    private OperationTemplateEntity template;
+    @JoinColumn(name = "application_id", referencedColumnName = "id", nullable = false)
+    private ApplicationEntity application;
 
     @Column(name = "external_id")
     private String externalId;
 
-    @Column(name = "operation_type")
+    @Column(name = "operation_type", nullable = false)
     private String operationType;
 
-    @Column(name = "data")
+    @Column(name = "data", nullable = false)
     private String data;
 
+    @SuppressWarnings("JpaAttributeTypeInspection")
     @Column(name = "parameters")
-    private String parameters;
+    @Convert(converter = OperationParameterConverter.class)
+    private Map<String, String> parameters = new HashMap<>();
 
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     @Convert(converter = OperationStatusDoConverter.class)
     private OperationStatusDo status;
 
-    @Column(name = "signature_type")
+    @Column(name = "signature_type", nullable = false)
     @Convert(converter = SignatureTypeConverter.class)
     private PowerAuthSignatureTypes[] signatureType;
 
-    @Column(name = "failure_count")
+    @Column(name = "failure_count", nullable = false)
     private Long failureCount;
 
-    @Column(name = "max_failure_count")
+    @Column(name = "max_failure_count", nullable = false)
     private Long maxFailureCount;
 
-    @Column(name = "timestamp_created")
+    @Column(name = "timestamp_created", nullable = false)
     private Date timestampCreated;
 
-    @Column(name = "timestamp_expires")
+    @Column(name = "timestamp_expires", nullable = false)
     private Date timestampExpires;
 
     @Column(name = "timestamp_finalized")
@@ -122,35 +117,19 @@ public class OperationEntity implements Serializable {
     }
 
     /**
-     * Get application ID.
-     * @return Application ID.
+     * Get application.
+     * @return Application.
      */
-    public Long getApplicationId() {
-        return applicationId;
+    public ApplicationEntity getApplication() {
+        return application;
     }
 
     /**
      * Set application ID.
      * @param applicationId Application ID.
      */
-    public void setApplicationId(Long applicationId) {
-        this.applicationId = applicationId;
-    }
-
-    /**
-     * Get template.
-     * @return Template.
-     */
-    public OperationTemplateEntity getTemplate() {
-        return template;
-    }
-
-    /**
-     * Set template.
-     * @param template Template.
-     */
-    public void setTemplate(OperationTemplateEntity template) {
-        this.template = template;
+    public void setApplication(ApplicationEntity applicationId) {
+        this.application = applicationId;
     }
 
     /**
@@ -205,7 +184,7 @@ public class OperationEntity implements Serializable {
      * Get operation parameters.
      * @return Operation parameters.
      */
-    public String getParameters() {
+    public Map<String, String> getParameters() {
         return parameters;
     }
 
@@ -213,7 +192,7 @@ public class OperationEntity implements Serializable {
      * Set operation parameters.
      * @param parameters Operation parameters.
      */
-    public void setParameters(String parameters) {
+    public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
 
@@ -334,51 +313,30 @@ public class OperationEntity implements Serializable {
         if (this == o) return true;
         if (!(o instanceof OperationEntity)) return false;
         OperationEntity that = (OperationEntity) o;
-        return Objects.equals(id, that.id)
-                && Objects.equals(userId, that.userId)
-                && Objects.equals(template, that.template)
-                && Objects.equals(externalId, that.externalId)
-                && Objects.equals(operationType, that.operationType)
-                && Objects.equals(data, that.data)
-                && Objects.equals(parameters, that.parameters)
-                && status == that.status
-                && Arrays.equals(signatureType, that.signatureType)
-                && Objects.equals(failureCount, that.failureCount)
-                && Objects.equals(maxFailureCount, that.maxFailureCount)
-                && Objects.equals(timestampCreated, that.timestampCreated)
-                && Objects.equals(timestampExpires, that.timestampExpires)
-                && Objects.equals(timestampFinalized, that.timestampFinalized);
+        return id.equals(that.id) // ID is generated on application level
+                && userId.equals(that.userId)
+                && application.equals(that.application)
+                && operationType.equals(that.operationType)
+                && data.equals(that.data)
+                && Objects.equals(parameters, that.parameters);
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(
-                id,
-                userId,
-                template,
-                externalId,
-                operationType,
-                data,
-                parameters,
-                status,
-                signatureType,
-                failureCount,
-                maxFailureCount,
-                timestampCreated,
-                timestampExpires,
-                timestampFinalized
+                id, userId, application, operationType, data, parameters
         );
     }
 
-    @Override public String toString() {
+    @Override
+    public String toString() {
         return "OperationEntity{" +
                 "id='" + id + '\'' +
                 ", userId='" + userId + '\'' +
-                ", template=" + template.toString() +
                 ", externalId='" + externalId + '\'' +
                 ", operationType='" + operationType + '\'' +
                 ", data='" + data + '\'' +
-                ", parameters='" + parameters + '\'' +
+                ", parameters='" + Collections.singletonList(parameters) + '\'' +
                 ", status=" + status +
                 ", signatureType='" + Arrays.toString(signatureType) + '\'' +
                 ", failureCount=" + failureCount +

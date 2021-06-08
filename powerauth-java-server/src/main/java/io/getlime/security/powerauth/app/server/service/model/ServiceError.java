@@ -227,9 +227,29 @@ public class ServiceError {
      */
     public static final String OPERATION_REJECT_FAILURE = "ERR0038";
 
+    /**
+     * Operation template already exists.
+     */
+    public static final String OPERATION_TEMPLATE_ALREADY_EXISTS = "ERR0039";
+
+    /**
+     * Activation cannot be created with the specified properties.
+     */
+    public static final String ACTIVATION_CREATE_FAILED = "ERR0040";
+
+    /**
+     * Operation related error occurred.
+     */
+    public static final String OPERATION_ERROR = "ERR0041";
+
+    /**
+     * Operation template related error occurred.
+     */
+    public static final String OPERATION_TEMPLATE_ERROR = "ERR0042";
+
 
     public static List<String> allCodes() {
-        List<String> list = new ArrayList<>(40);
+        List<String> list = new ArrayList<>(42);
         list.add(UNKNOWN_ERROR);
         list.add(NO_USER_ID);
         list.add(NO_APPLICATION_ID);
@@ -269,6 +289,10 @@ public class ServiceError {
         list.add(OPERATION_INVALID_STATE);
         list.add(OPERATION_APPROVE_FAILURE);
         list.add(OPERATION_REJECT_FAILURE);
+        list.add(OPERATION_TEMPLATE_ALREADY_EXISTS);
+        list.add(ACTIVATION_CREATE_FAILED);
+        list.add(OPERATION_ERROR);
+        list.add(OPERATION_TEMPLATE_ERROR);
         return list;
     }
 
